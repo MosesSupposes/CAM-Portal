@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>C.A.M. - Cosmic Astrological Minds | College Astrology Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      box-sizing: border-box;
+
+      --fire: #F08A6C;
+      --earth: #9CBD78;
+      --air: #86C3E0;
+      --water: #8F9BF0;
+      --on: #1A1226;
+
+      --bg: #160F22;
+      --panel: #20172F;
+      --ink: #EFE8F5;
+      --muted: #A89DB8;
+      --line: #3A2D50;
+      --house: #251B36;
+      --house-active: #3B2C57;
+      --accent: #F2C94C;
+
+      --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+      --body: "Newsreader", Georgia, "Times New Roman", serif;
+      --glyph: "Segoe UI Symbol", "Noto Sans Symbols", "Apple Symbols", "DejaVu Sans", sans-serif;
+    }
+
+    :root[data-theme="light"] {
+      --bg: #F3EEF8;
+      --panel: #FFFFFF;
+      --ink: #211733;
+      --muted: #655978;
+      --line: #D8CEE6;
+      --house: #E8E0F1;
+      --house-active: #D3C4EA;
+      --accent: #7A4DD8;
+    }
+
+    *, *::before, *::after {
+      box-sizing: inherit;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--body);
+      font-size: 17px;
+      line-height: 1.55;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .brand .logo-mark {
+      font-size: 26px;
+      color: var(--accent);
+      font-family: var(--glyph);
+    }
+
+    .brand .title {
+      font-family: var(--display);
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+
+    .brand .sub {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button {
+      font-family: var(--display);
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 10px;
+      padding: 8px 16px;
+      font-size: 14px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink);
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      filter: brightness(1.15);
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: var(--on);
+      border-color: var(--accent);
+    }
+
+    button.nav-btn.active {
+      background: var(--house-active);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: clamp(16px, 3.5vw, 36px) 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: clamp(18px, 3vw, 32px);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 14px 4px 10px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--el, var(--accent)) 22%, transparent);
+      border: 1px solid var(--el, var(--accent));
+      font-family: var(--display);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .chip .g {
+      font-family: var(--glyph);
+      font-size: 18px;
+    }
+
+    input, select, textarea {
+      display: block;
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 15px;
+    }
+
+    input:focus, select:focus, textarea:focus, button:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background: var(--house);
+      font-family: var(--display);
+      font-weight: 600;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      color: var(--accent);
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.5; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+
+    .core-sparkle {
+      fill: var(--accent);
+      font-family: var(--glyph);
+      font-size: 18px;
+      text-anchor: middle;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: twinkle 3.2s ease-in-out infinite;
+    }
+
+    .view-section {
+      display: none;
+    }
+
+    .view-section.active {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* Interactive Wheel Container */
+    #wheel-svg {
+      width: 100%;
+      max-width: 520px;
+      height: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #wheel-svg:active {
+      cursor: grabbing;
+    }
+
+    footer {
+      border-top: 1px solid var(--line);
+      background: var(--panel);
+      padding: 18px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 36px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 11, 25, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .feedback-banner {
+      background: linear-gradient(90deg, rgba(242, 201, 76, 0.12), rgba(59, 44, 87, 0.4));
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header>
+    <div class="header-inner">
+      <div class="brand" onclick="switchView('portal')">
+        <span class="logo-mark">✦</span>
+        <div>
+          <div class="title">C.A.M.</div>
+          <div class="sub">Cosmic Astrological Minds</div>
+        </div>
+      </div>
+      <nav>
+        <button type="button" class="nav-btn active" id="btn-portal" onclick="switchView('portal')">Club Portal</button>
+        <button type="button" class="nav-btn" id="btn-wheel" onclick="switchView('wheel')">Natal Wheel ✦</button>
+        <button type="button" class="nav-btn" id="btn-admin" onclick="switchView('admin')">Admin Cockpit</button>
+        <button type="button" onclick="toggleTheme()" title="Toggle Light/Dark Theme" style="margin-left:4px">☀️/🌙</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Views -->
+  <main>
+
+    <!-- Feedback Ribbon -->
+    <div class="feedback-banner">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="color:var(--accent); font-size:18px;">🪐</span>
+        <span style="font-size:14px; font-weight:500;">
+          <strong>Member Feedback Mode:</strong> Explore the wheel and portal. Leave reflections or suggestions in the Admin notes!
+        </span>
+      </div>
+      <span class="chip" style="font-size:12px; padding:2px 10px; margin:0">v1.2 Live</span>
+    </div>
+
+    <!-- VIEW 1: PUBLIC PORTAL -->
+    <section id="view-portal" class="view-section active">
+      <div class="panel" style="text-align: center; padding: clamp(36px, 5vw, 60px) 20px;">
+        <div class="chip" style="margin: 0 auto 14px;">
+          <span class="g">✦</span>
+          <span>College Astrology Club & Society</span>
+        </div>
+        <h1 style="font-family: var(--display); font-size: clamp(32px, 5vw, 54px); margin: 0 0 14px; line-height: 1.1;">
+          Cosmic Astrological Minds
+        </h1>
+        <p style="font-size: clamp(17px, 2vw, 21px); color: var(--muted); max-width: 660px; margin: 0 auto 26px;">
+          A sanctuary uniting stargazers, chartists, and curious minds. Explore archetypes, track planetary movements, and reflect on the cosmos.
+        </p>
+        <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+          <button type="button" class="primary" style="padding: 12px 24px; font-size: 16px;" onclick="switchView('wheel')">
+            Launch Natal Wheel ✦
+          </button>
+          <button type="button" style="padding: 12px 24px; font-size: 16px;" onclick="switchView('admin')">
+            Member Cockpit
+          </button>
+        </div>
+      </div>
+
+      <!-- 12 Signs Archetypes -->
+      <div>
+        <h2 style="font-family: var(--display); font-size: 26px; text-align: center; margin-bottom: 20px;">The 12 Celestial Archetypes</h2>
+        <div id="signs-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;"></div>
+      </div>
+
+      <!-- Upcoming Events -->
+      <div class="panel">
+        <h2 style="font-family: var(--display); font-size: 24px; margin: 0 0 16px;">Upcoming Club Gatherings</h2>
+        <div id="events-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;"></div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: NATAL WHEEL -->
+    <section id="view-wheel" class="view-section">
+      <iframe src="https://cam-zodiac-wheel.netlify.app" title="Natal Wheel" style="width: 100%; height: 80vh; min-height: 600px; border: 1px solid var(--line); border-radius: 12px;" loading="lazy"></iframe>
+      <p style="text-align: center; font-size: 13px;"><a href="https://cam-zodiac-wheel.netlify.app" target="_blank" rel="noopener noreferrer">Open Natal Wheel in a new tab ↗</a></p>
+      <div style="display: none; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 32px; align-items: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+          <svg id="wheel-svg" viewBox="0 0 600 600">
+            <!-- Wheel Rotator -->
+            <g id="wheelG" transform="translate(300, 300) rotate(15)" style="transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);"></g>
+            
+            <!-- Core Central Ascendant Disc -->
+            <g transform="translate(300, 300)">
+              <circle r="120" fill="var(--panel)" stroke="var(--line)" stroke-width="3"></circle>
+              <text id="core-glyph" y="-8" text-anchor="middle" dominant-baseline="central" font-size="68px" font-family="var(--glyph)" fill="var(--ink)">♍︎</text>
+              <text class="core-sparkle" x="-58" y="-38">✦</text>
+              <text id="core-cap" y="50" text-anchor="middle" font-size="14px" font-weight="600" font-family="var(--display)" fill="var(--muted)">Virgo Rising</text>
+            </g>
+            
+            <!-- Fixed Top Pointer Arrow (12 o'clock) -->
+            <polygon points="300,24 288,2 312,2" fill="var(--accent)"></polygon>
+          </svg>
+          <p style="font-size: 13px; color: var(--muted); margin: 0; text-align: center;">
+            Drag to spin or click any zodiac segment to align with the cosmic pointer.
+          </p>
+        </div>
+
+        <div class="panel" style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div id="house-chip" class="chip">Virgo · EARTH</div>
+            <span id="house-progress" style="font-size: 13px; color: var(--muted); font-family: var(--display);">House 1 of 12</span>
+          </div>
+          <div>
+            <h2 id="house-title" style="font-family: var(--display); font-size: 26px; margin: 2px 0 6px;">1 House of Self</h2>
+            <p id="house-about" style="color: var(--muted); font-size: 15px; margin: 0 0 10px;">How you meet the world: your first impression, your body, and your instinctive way of starting things.</p>
+          </div>
+          <blockquote id="house-ask" style="margin: 6px 0; padding: 6px 0 6px 14px; border-left: 3px solid var(--accent); font-style: italic; font-size: 16px;">
+            "What do people notice about you first, and does it match how you feel inside?"
+          </blockquote>
+          <div>
+            <label style="display:block; font-family: var(--display); font-weight:600; font-size: 13px; margin-bottom: 4px;">Your Personal Reflection</label>
+            <textarea id="house-note" rows="3" placeholder="Write what surfaces for this house... saved automatically."></textarea>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+            <button type="button" onclick="stepHouse(-1)">← Previous House</button>
+            <button type="button" class="primary" onclick="stepHouse(1)">Next House →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: ADMIN DASHBOARD -->
+    <section id="view-admin" class="view-section">
+      <!-- Quick Stats -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
+        <div class="panel" style="padding: 18px;">
+          <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Club Members</span>
+          <div id="stat-total" style="font-size: 32px; font-weight: 700; font-family: var(--display); color: var(--accent); margin-top: 2px;">4</div>
+          <span style="font-size: 12px; color: var(--muted);">Direct from members.csv</span>
+        </div>
+        <div class="panel" style="padding: 18px;">
+          <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Club Officers</span>
+          <div id="stat-officers" style="font-size: 32px; font-weight: 700; font-family: var(--display); color: var(--ink); margin-top: 2px;">2</div>
+          <span style="font-size: 12px; color: var(--muted);">Momo Samuel, Cam</span>
+        </div>
+        <div class="panel" style="padding: 18px;">
+          <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Gatherings</span>
+          <div id="stat-events" style="font-size: 32px; font-weight: 700; font-family: var(--display); color: var(--ink); margin-top: 2px;">3</div>
+          <span style="font-size: 12px; color: var(--muted);">Upcoming sessions</span>
+        </div>
+        <div class="panel" style="padding: 18px;">
+          <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Elemental Balance</span>
+          <div id="stat-elements" style="display: flex; gap: 8px; margin-top: 8px; font-size: 14px; font-weight: bold;">
+            <span style="color:var(--fire)">🔥 1</span>
+            <span style="color:var(--earth)">🌿 1</span>
+            <span style="color:var(--air)">💨 1</span>
+            <span style="color:var(--water)">🌊 1</span>
+          </div>
+          <span style="font-size: 12px; color: var(--muted); margin-top: 4px; display: block;">Balanced Quad Triplicity</span>
+        </div>
+      </div>
+
+      <!-- Member Roster -->
+      <div class="panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px;">
+          <div>
+            <h2 style="font-family: var(--display); margin: 0; font-size: 24px;">C.A.M. Official Member Roster</h2>
+            <p style="margin: 4px 0 0; color: var(--muted); font-size: 14px;">Directly synchronized with club records.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" onclick="exportCSV()">⬇ Export CSV</button>
+            <button type="button" class="primary" onclick="openAddMemberModal()">+ Add Member</button>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+          <input type="text" id="member-search" style="max-width: 280px;" placeholder="Search name, sign, email..." oninput="renderMembersTable()">
+          <select id="member-filter" style="max-width: 180px;" onchange="renderMembersTable()">
+            <option value="all">All Elements</option>
+            <option value="fire">Fire Elements</option>
+            <option value="earth">Earth Elements</option>
+            <option value="air">Air Elements</option>
+            <option value="water">Water Elements</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Member Name</th>
+                <th>Zodiac Sign</th>
+                <th>Element</th>
+                <th>Club Role</th>
+                <th>Gender / Pronouns</th>
+                <th>Contact</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="members-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add Member Modal -->
+  <div id="add-member-modal" class="modal-backdrop">
+    <div class="panel" style="width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 12px;">
+      <h2 style="font-family: var(--display); margin: 0; font-size: 22px;">Add Club Member</h2>
+      <div>
+        <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px">Full Name</label>
+        <input id="new-name" placeholder="Full Name" required>
+      </div>
+      <div>
+        <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px">Email</label>
+        <input id="new-email" type="email" placeholder="student@college.edu">
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div>
+          <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px">Phone</label>
+          <input id="new-phone" placeholder="(555) 000-0000">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px">Pronouns</label>
+          <input id="new-gender" placeholder="e.g. NB, F, M">
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div>
+          <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px">Zodiac Sign</label>
+          <select id="new-sign">
+            <option value="Aries">Aries (♈︎)</option>
+            <option value="Taurus">Taurus (♉︎)</option>
+            <option value="Gemini">Gemini (♊︎)</option>
+            <option value="Cancer">Cancer (♋︎)</option>
+            <option value="Leo">Leo (♌︎)</option>
+            <option value="Virgo" selected>Virgo (♍︎)</option>
+            <option value="Libra">Libra (♎︎)</option>
+            <option value="Scorpio">Scorpio (♏︎)</option>
+            <option value="Sagittarius">Sagittarius (♐︎)</option>
+            <option value="Capricorn">Capricorn (♑︎)</option>
+            <option value="Aquarius">Aquarius (♒︎)</option>
+            <option value="Pisces">Pisces (♓︎)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px">Club Role</label>
+          <select id="new-role">
+            <option value="member">Active Member</option>
+            <option value="officer">Club Officer</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px;">
+        <button type="button" onclick="closeAddMemberModal()">Cancel</button>
+        <button type="button" class="primary" onclick="submitAddMember()">Save Member</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div><strong>C.A.M. (Cosmic Astrological Minds)</strong> · College Astrology Club Platform</div>
+      <div>Deep Cosmic Blue, Celestial Gold, Astral Indigo & Purple</div>
+    </div>
+  </footer>
+
+  <script>
+    const VS = "\uFE0E";
+    const SIGNS = [
+      { id: 1, name: "Aries", glyph: "\u2648" + VS, element: "fire", style: "act first, refine later", dates: "Mar 21 - Apr 19" },
+      { id: 2, name: "Taurus", glyph: "\u2649" + VS, element: "earth", style: "steady & building to last", dates: "Apr 20 - May 20" },
+      { id: 3, name: "Gemini", glyph: "\u264A" + VS, element: "air", style: "curious & options open", dates: "May 21 - Jun 20" },
+      { id: 4, name: "Cancer", glyph: "\u264B" + VS, element: "water", style: "intuitive & protective", dates: "Jun 21 - Jul 22" },
+      { id: 5, name: "Leo", glyph: "\u264C" + VS, element: "fire", style: "warmth & radiant light", dates: "Jul 23 - Aug 22" },
+      { id: 6, name: "Virgo", glyph: "\u264D" + VS, element: "earth", style: "precision & continuous care", dates: "Aug 23 - Sep 22" },
+      { id: 7, name: "Libra", glyph: "\u264E" + VS, element: "air", style: "harmony & dual balance", dates: "Sep 23 - Oct 22" },
+      { id: 8, name: "Scorpio", glyph: "\u264F" + VS, element: "water", style: "profound & transformative", dates: "Oct 23 - Nov 21" },
+      { id: 9, name: "Sagittarius", glyph: "\u2650" + VS, element: "fire", style: "quest for higher wisdom", dates: "Nov 22 - Dec 21" },
+      { id: 10, name: "Capricorn", glyph: "\u2651" + VS, element: "earth", style: "architect of endurance", dates: "Dec 22 - Jan 19" },
+      { id: 11, name: "Aquarius", glyph: "\u2652" + VS, element: "air", style: "original & future visionary", dates: "Jan 20 - Feb 18" },
+      { id: 12, name: "Pisces", glyph: "\u2653" + VS, element: "water", style: "empathic & oceanic dreams", dates: "Feb 19 - Mar 20" }
+    ];
+
+    const HOUSES = [
+      { short: "Self", title: "House of Self", about: "How you meet the world: your first impression, your body, and your instinctive way of starting things.", ask: "What do people notice about you first, and does it match how you feel inside?" },
+      { short: "Worth", title: "House of Worth", about: "What you own and what you value: money, possessions, and the things that make you feel secure.", ask: "What do you spend on without hesitation, and what does that say about what you value?" },
+      { short: "Voice", title: "House of Voice", about: "How you think and talk: everyday conversation, siblings, neighbors, and the way you learn.", ask: "When you can't find the words, what do you do instead?" },
+      { short: "Roots", title: "House of Roots", about: "Where you come from: home, family, and the private foundation you return to.", ask: "What does home feel like at its best, and what from childhood do you still carry?" },
+      { short: "Joy", title: "House of Joy", about: "What lights you up: creativity, play, romance, and the things you do purely for pleasure.", ask: "When did you last lose track of time doing something just because you loved it?" },
+      { short: "Craft", title: "House of Craft", about: "Your daily rhythm: routines, work habits, health, and the small skills you keep sharpening.", ask: "Which daily habit gives you energy, and which one quietly drains it?" },
+      { short: "Others", title: "House of Others", about: "Your one-to-one bonds: partners, close friends, and even the rivals who mirror you.", ask: "What do you keep finding in the people closest to you, good or bad?" },
+      { short: "Depths", title: "House of Depths", about: "What you share and risk with others: intimacy, trust, shared money, and big change.", ask: "What have you let go of that changed you for the better?" },
+      { short: "Horizons", title: "House of Horizons", about: "What you believe and where you want to go: travel, philosophy, teaching, and the big questions.", ask: "What belief have you outgrown, and what is pulling you toward something larger?" },
+      { short: "Legacy", title: "House of Legacy", about: "What you build in public: your career, your reputation, and the mark you want to leave.", ask: "If your work were remembered for one thing, what would you want it to be?" },
+      { short: "Community", title: "House of Community", about: "Your circles: friends, groups, causes, and the future you hope to help shape.", ask: "Which group makes you feel most like yourself, and what do you give back to it?" },
+      { short: "Solitude", title: "House of Solitude", about: "What sits below the surface: rest, dreams, hidden patterns, and how things end.", ask: "What do you need to be alone to figure out?" }
+    ];
+
+    // Initial Members loaded from members.csv
+    let members = [
+      { id: 1, name: "Momo Samuel", email: "theCodingShaman@gmail.com", phone: "(929) 389-7608", gender: "NB/F", sign: "Virgo", role: "officer" },
+      { id: 2, name: "Cam", email: "cam@cosmicminds.club", phone: "—", gender: "NB/M", sign: "Leo", role: "officer" },
+      { id: 3, name: "Mimi", email: "mimi@cosmicminds.club", phone: "—", gender: "F", sign: "Aquarius", role: "member" },
+      { id: 4, name: "Charlie Huerrera", email: "charlie@cosmicminds.club", phone: "—", gender: "M", sign: "Scorpio", role: "member" }
+    ];
+
+    const events = [
+      { id: 1, title: "Full Moon in Scorpio Night Observation", date: "Nov 4, 8:00 PM", location: "Observatory Quad", type: "stargazing" },
+      { id: 2, title: "Introduction to Natal Wheel Interpretation", date: "Nov 12, 6:30 PM", location: "Astrolab Hall 204", type: "workshop" },
+      { id: 3, title: "Zodiac Synastry & Compatibility Circle", date: "Nov 20, 7:00 PM", location: "Campus Student Union", type: "social" }
+    ];
+
+    let currentHouse = 0;
+    let audioContext = null;
+
+    function playTone(freq) {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!audioContext && AudioCtx) audioContext = new AudioCtx();
+        if (audioContext && audioContext.state === "suspended") audioContext.resume();
+        if (!audioContext) return;
+
+        const now = audioContext.currentTime;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.025, now + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.start(now);
+        osc.stop(now + 0.55);
+      } catch (e) {}
+    }
+
+    function switchView(viewName) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('view-' + viewName).classList.add('active');
+      const btn = document.getElementById('btn-' + viewName);
+      if (btn) btn.classList.add('active');
+      if (viewName === 'wheel') buildWheel();
+    }
+
+    function toggleTheme() {
+      const root = document.documentElement;
+      const current = root.getAttribute('data-theme');
+      root.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
+    }
+
+    function renderPortal() {
+      const signsGrid = document.getElementById('signs-grid');
+      signsGrid.innerHTML = SIGNS.map(s => `
+        <div class="panel" style="padding: 18px; cursor: pointer;" onclick="selectSignAndWheel(${s.id - 1})">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:30px; font-family:var(--glyph); color:var(--${s.element})">${s.glyph}</span>
+            <span class="chip" style="--el:var(--${s.element}); font-size:11px; padding:2px 8px">${s.element}</span>
+          </div>
+          <h3 style="font-family:var(--display); margin:8px 0 2px; font-size:18px;">${s.name}</h3>
+          <p style="font-size:12px; color:var(--accent); margin:0 0 4px;">${s.dates}</p>
+          <p style="font-size:13px; color:var(--muted); margin:0;">"${s.style}"</p>
+        </div>
+      `).join('');
+
+      const eventsGrid = document.getElementById('events-grid');
+      eventsGrid.innerHTML = events.map(ev => `
+        <div style="background:var(--house); border:1px solid var(--line); border-radius:12px; padding:16px;">
+          <span style="font-size:11px; color:var(--accent); text-transform:uppercase; font-weight:bold;">${ev.type}</span>
+          <h3 style="font-family:var(--display); font-size:17px; margin:4px 0 6px;">${ev.title}</h3>
+          <p style="font-size:13px; color:var(--muted); margin:0 0 4px;">📍 ${ev.location}</p>
+          <p style="font-size:13px; color:var(--ink); margin:0;">📅 ${ev.date}</p>
+        </div>
+      `).join('');
+    }
+
+    function selectSignAndWheel(idx) {
+      currentHouse = idx;
+      switchView('wheel');
+      updateHouseView();
+    }
+
+    function buildWheel() {
+      const g = document.getElementById('wheelG');
+      g.innerHTML = '';
+
+      const rOuter = 280, rMid = 200, rInner = 120;
+      const deg2rad = d => (d * Math.PI) / 180;
+
+      SIGNS.forEach((sign, i) => {
+        const startAngle = -(i * 30 + 30);
+        const endAngle = -(i * 30);
+        const midAngle = -(i * 30 + 15);
+
+        // Outer Zodiac Wedge
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        const x1 = rOuter * Math.sin(deg2rad(startAngle));
+        const y1 = -rOuter * Math.cos(deg2rad(startAngle));
+        const x2 = rOuter * Math.sin(deg2rad(endAngle));
+        const y2 = -rOuter * Math.cos(deg2rad(endAngle));
+        const x3 = rMid * Math.sin(deg2rad(endAngle));
+        const y3 = -rMid * Math.cos(deg2rad(endAngle));
+        const x4 = rMid * Math.sin(deg2rad(startAngle));
+        const y4 = -rMid * Math.cos(deg2rad(startAngle));
+
+        path.setAttribute("d", `M ${x1} ${y1} A ${rOuter} ${rOuter} 0 0 1 ${x2} ${y2} L ${x3} ${y3} A ${rMid} ${rMid} 0 0 0 ${x4} ${y4} Z`);
+        path.setAttribute("fill", `var(--${sign.element})`);
+        path.setAttribute("fill-opacity", "0.22");
+        path.setAttribute("stroke", "var(--line)");
+        path.style.cursor = "pointer";
+        path.onclick = () => selectHouse(i);
+        g.appendChild(path);
+
+        // Glyph
+        const gText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        gText.setAttribute("x", 242 * Math.sin(deg2rad(midAngle)));
+        gText.setAttribute("y", -242 * Math.cos(deg2rad(midAngle)));
+        gText.setAttribute("text-anchor", "middle");
+        gText.setAttribute("dominant-baseline", "central");
+        gText.setAttribute("font-size", "24");
+        gText.setAttribute("font-family", "var(--glyph)");
+        gText.setAttribute("fill", "var(--ink)");
+        gText.style.pointerEvents = "none";
+        gText.textContent = sign.glyph;
+        g.appendChild(gText);
+
+        // Sign Name
+        const nText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        nText.setAttribute("x", 214 * Math.sin(deg2rad(midAngle)));
+        nText.setAttribute("y", -214 * Math.cos(deg2rad(midAngle)));
+        nText.setAttribute("text-anchor", "middle");
+        nText.setAttribute("dominant-baseline", "central");
+        nText.setAttribute("font-size", "11");
+        nText.setAttribute("font-weight", "600");
+        nText.setAttribute("font-family", "var(--display)");
+        nText.setAttribute("fill", "var(--ink)");
+        nText.style.pointerEvents = "none";
+        nText.textContent = sign.name;
+        g.appendChild(nText);
+
+        // Inner House Wedge
+        const hPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        const hx1 = rMid * Math.sin(deg2rad(startAngle));
+        const hy1 = -rMid * Math.cos(deg2rad(startAngle));
+        const hx2 = rMid * Math.sin(deg2rad(endAngle));
+        const hy2 = -rMid * Math.cos(deg2rad(endAngle));
+        const hx3 = rInner * Math.sin(deg2rad(endAngle));
+        const hy3 = -rInner * Math.cos(deg2rad(endAngle));
+        const hx4 = rInner * Math.sin(deg2rad(startAngle));
+        const hy4 = -rInner * Math.cos(deg2rad(startAngle));
+
+        hPath.setAttribute("d", `M ${hx1} ${hy1} A ${rMid} ${rMid} 0 0 1 ${hx2} ${hy2} L ${hx3} ${hy3} A ${rInner} ${rInner} 0 0 0 ${hx4} ${hy4} Z`);
+        hPath.setAttribute("fill", i === currentHouse ? "var(--house-active)" : "var(--house)");
+        hPath.setAttribute("stroke", "var(--line)");
+        hPath.style.cursor = "pointer";
+        hPath.onclick = () => selectHouse(i);
+        g.appendChild(hPath);
+
+        // House Number
+        const hNum = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        hNum.setAttribute("x", 165 * Math.sin(deg2rad(midAngle)));
+        hNum.setAttribute("y", -165 * Math.cos(deg2rad(midAngle)));
+        hNum.setAttribute("text-anchor", "middle");
+        hNum.setAttribute("dominant-baseline", "central");
+        hNum.setAttribute("font-size", "18");
+        hNum.setAttribute("font-weight", "700");
+        hNum.setAttribute("font-family", "var(--display)");
+        hNum.setAttribute("fill", i === currentHouse ? "var(--accent)" : "var(--ink)");
+        hNum.style.pointerEvents = "none";
+        hNum.textContent = i + 1;
+        g.appendChild(hNum);
+      });
+
+      // Align selected house centered at top arrow (12 o'clock)
+      const targetRotation = (currentHouse * 30 + 15);
+      g.style.transform = `translate(300px, 300px) rotate(${targetRotation}deg)`;
+      updateHouseView();
+    }
+
+    function selectHouse(idx) {
+      currentHouse = (idx + 12) % 12;
+      playTone(330 + currentHouse * 25);
+      buildWheel();
+    }
+
+    function stepHouse(delta) {
+      selectHouse(currentHouse + delta);
+    }
+
+    function updateHouseView() {
+      const h = HOUSES[currentHouse];
+      const s = SIGNS[currentHouse];
+      document.getElementById('core-glyph').textContent = s.glyph;
+      document.getElementById('core-cap').textContent = s.name + " Rising";
+
+      const chip = document.getElementById('house-chip');
+      chip.textContent = `${s.name} · ${s.element.toUpperCase()}`;
+      chip.style.setProperty('--el', `var(--${s.element})`);
+
+      document.getElementById('house-progress').textContent = `House ${currentHouse + 1} of 12`;
+      document.getElementById('house-title').innerHTML = `<span style="color:var(--accent); font-size:1.3em">${currentHouse + 1}</span> ${h.title}`;
+      document.getElementById('house-about').textContent = h.about;
+      document.getElementById('house-ask').textContent = `"${h.ask}"`;
+      document.getElementById('house-note').value = localStorage.getItem('cam_wheel_note_' + currentHouse) || "";
+    }
+
+    document.getElementById('house-note').addEventListener('input', (e) => {
+      localStorage.setItem('cam_wheel_note_' + currentHouse, e.target.value);
+    });
+
+    // Touch & Drag Support for Wheel
+    let isDragging = false;
+    let dragStartAngle = 0;
+    let wheelBaseAngle = 15;
+    const wheelSvg = document.getElementById('wheel-svg');
+
+    function getAngle(event) {
+      const rect = wheelSvg.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+      const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+      return (Math.atan2(clientX - cx, -(clientY - cy)) * 180) / Math.PI;
+    }
+
+    wheelSvg.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragStartAngle = getAngle(e);
+      wheelBaseAngle = (currentHouse * 30 + 15);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const currentAngle = getAngle(e);
+      const delta = currentAngle - dragStartAngle;
+      const rotator = document.getElementById('wheelG');
+      rotator.style.transition = 'none';
+      rotator.style.transform = `translate(300px, 300px) rotate(${wheelBaseAngle + delta}deg)`;
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      const rotator = document.getElementById('wheelG');
+      rotator.style.transition = 'transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1)';
+      const endAngle = getAngle(e);
+      const delta = endAngle - dragStartAngle;
+      const finalAngle = wheelBaseAngle + delta;
+      const nearestHouse = Math.round((finalAngle - 15) / 30);
+      selectHouse(nearestHouse);
+    });
+
+    // Members Management
+    function renderMembersTable() {
+      const filter = document.getElementById('member-filter').value;
+      const query = document.getElementById('member-search').value.toLowerCase();
+      const tbody = document.getElementById('members-tbody');
+
+      const filtered = members.filter(m => {
+        const s = SIGNS.find(x => x.name.toLowerCase() === m.sign.toLowerCase());
+        const matchElement = filter === 'all' || (s && s.element === filter);
+        const matchQuery = m.name.toLowerCase().includes(query) ||
+                           m.sign.toLowerCase().includes(query) ||
+                           m.email.toLowerCase().includes(query);
+        return matchElement && matchQuery;
+      });
+
+      tbody.innerHTML = filtered.map(m => {
+        const s = SIGNS.find(x => x.name.toLowerCase() === m.sign.toLowerCase()) || { glyph: "✦", element: "earth" };
+        return `
+          <tr>
+            <td style="font-weight:600">${m.name}</td>
+            <td>
+              <span style="font-family:var(--glyph); font-size:18px; margin-right:6px">${s.glyph}</span>
+              ${m.sign}
+            </td>
+            <td>
+              <span class="chip" style="--el:var(--${s.element}); font-size:12px; padding:2px 8px">${s.element}</span>
+            </td>
+            <td>
+              <span style="padding:3px 8px; border-radius:6px; font-size:12px; text-transform:uppercase; font-weight:bold; background:${m.role === 'officer' ? 'var(--house-active)' : 'transparent'}; color:${m.role === 'officer' ? 'var(--accent)' : 'inherit'}; border:1px solid var(--line)">
+                ${m.role}
+              </span>
+            </td>
+            <td style="color:var(--muted)">${m.gender || '—'}</td>
+            <td>
+              <div style="font-size:13px">${m.email}</div>
+              <div style="font-size:12px; color:var(--muted)">${m.phone}</div>
+            </td>
+            <td><span style="color:var(--earth); font-size:13px; font-weight:600">● Active</span></td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('stat-total').textContent = members.length;
+      document.getElementById('stat-officers').textContent = members.filter(m => m.role === 'officer').length;
+    }
+
+    function openAddMemberModal() {
+      document.getElementById('add-member-modal').classList.add('open');
+    }
+
+    function closeAddMemberModal() {
+      document.getElementById('add-member-modal').classList.remove('open');
+    }
+
+    function submitAddMember() {
+      const name = document.getElementById('new-name').value.trim();
+      if (!name) return alert('Please enter a name');
+      const email = document.getElementById('new-email').value.trim() || '—';
+      const phone = document.getElementById('new-phone').value.trim() || '—';
+      const gender = document.getElementById('new-gender').value.trim() || 'NB';
+      const sign = document.getElementById('new-sign').value;
+      const role = document.getElementById('new-role').value;
+
+      const newObj = { id: Date.now(), name, email, phone, gender, sign, role };
+      members.unshift(newObj);
+
+      // Post to backend API if live
+      fetch('/api/v1/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newObj)
+      }).catch(() => {});
+
+      closeAddMemberModal();
+      renderMembersTable();
+    }
+
+    function exportCSV() {
+      const headers = "Name,Email,Number,Gender,Sign,Role\n";
+      const rows = members.map(m => `"${m.name}","${m.email}","${m.phone}","${m.gender}","${m.sign}","${m.role}"`).join("\n");
+      const blob = new Blob([headers + rows], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = url = URL.createObjectURL(blob);
+      a.download = `cam_members_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+    }
+
+    // Init
+    renderPortal();
+    renderMembersTable();
+  </script>
+</body>
+</html>

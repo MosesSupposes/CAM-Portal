@@ -1,0 +1,76 @@
+services:
+  # 1. Reverse Proxy Gateway (Nginx) - AGENT-30
+  gateway:
+    image: nginx:alpine
+    container_name: cam_gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../backend:/var/www/html:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - cam_network
+
+  # 2. React Frontend Application - AGENT-10
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/react/Dockerfile
+    container_name: cam_frontend
+    environment:
+      - VITE_API_BASE_URL=/api
+    ports:
+      - "3000:3000"
+    networks:
+      - cam_network
+
+  # 3. Laravel Backend API (PHP-FPM) - AGENT-17 & AGENT-29
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/php/Dockerfile
+    container_name: cam_backend
+    working_dir: /var/www/html
+    volumes:
+      - ../backend:/var/www/html
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: cam_astrology_db
+      DB_USERNAME: cam_user
+      DB_PASSWORD: cam_password
+    depends_on:
+      - mysql
+    networks:
+      - cam_network
+
+  # 4. MySQL Relational Database - AGENT-24
+  mysql:
+    image: mysql:8.0
+    container_name: cam_mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret_password
+      MYSQL_DATABASE: cam_astrology_db
+      MYSQL_USER: cam_user
+      MYSQL_PASSWORD: cam_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - cam_db_data:/var/lib/mysql
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ../database/seeds/members_import.sql:/docker-entrypoint-initdb.d/02_seeds.sql:ro
+    networks:
+      - cam_network
+
+networks:
+  cam_network:
+    driver: bridge
+
+volumes:
+  cam_db_data:

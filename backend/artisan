@@ -1,0 +1,51 @@
+#!/usr/bin/env php
+<?php
+/**
+ * C.A.M. Cosmic Astrological Minds - Artisan CLI
+ */
+
+$command = $argv[1] ?? 'help';
+
+if ($command === 'serve') {
+    $host = '127.0.0.1';
+    $port = 8000;
+
+    foreach ($argv as $arg) {
+        if (strpos($arg, '--host=') === 0) {
+            $host = substr($arg, 7);
+        }
+        if (strpos($arg, '--port=') === 0) {
+            $port = substr($arg, 7);
+        }
+    }
+
+    echo "\n  \033[33;1m✦ Cosmic Astrological Minds (C.A.M.) Server\033[0m\n";
+    echo "  \033[36mPHP " . PHP_VERSION . "\033[0m · Laravel Compatible API & Web Engine\n";
+    echo "  Local Server: \033[32;1mhttp://{$host}:{$port}\033[0m\n";
+    echo "  API Health:   \033[34mhttp://{$host}:{$port}/api/v1/health\033[0m\n";
+    echo "  Members API:  \033[34mhttp://{$host}:{$port}/api/v1/members\033[0m\n\n";
+    echo "  Press Ctrl+C to stop the server.\n\n";
+
+    passthru(escapeshellcmd(PHP_BINARY) . " -S {$host}:{$port} " . escapeshellarg(__DIR__ . '/server.php'));
+    exit(0);
+}
+
+if ($command === 'route:list') {
+    echo "GET|HEAD   / ..................................................... Web App\n";
+    echo "GET        /api/v1/health ........................................ API Health\n";
+    echo "GET        /api/v1/zodiac/signs .................................. 12 Zodiac Signs\n";
+    echo "GET        /api/v1/zodiac/transits ............................... Current Transits\n";
+    echo "GET|POST   /api/v1/members ....................................... Member Roster (members.csv)\n";
+    echo "GET        /api/v1/events ........................................ Club Gatherings\n";
+    exit(0);
+}
+
+if ($command === 'help') {
+    echo "C.A.M. Artisan Commands:\n";
+    echo "  serve       Start the development server (php artisan serve)\n";
+    echo "  route:list  List registered API & Web routes\n";
+    exit(0);
+}
+
+echo "Unknown command: {$command}\n";
+exit(1);

@@ -1,0 +1,21 @@
+{
+    "name": "cam/astrology-backend",
+    "type": "project",
+    "description": "Cosmic Astrological Minds (C.A.M.) Laravel Backend API",
+    "keywords": ["astrology", "laravel", "cam", "cosmic-minds"],
+    "license": "MIT",
+    "require": {
+        "php": "^8.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    },
+    "scripts": {
+        "serve": "php artisan serve",
+        "start": "php artisan serve",
+        "dev": "php artisan serve",
+        "route:list": "php artisan route:list"
+    }
+}

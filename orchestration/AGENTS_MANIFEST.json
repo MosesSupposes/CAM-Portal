@@ -1,0 +1,277 @@
+{
+  "system": "Cosmic Astrological Minds (C.A.M.) Web & Admin Platform",
+  "version": "1.0.0",
+  "total_agents": 32,
+  "execution_model": "Phased Wave DAG (Directed Acyclic Graph)",
+  "color_palette": {
+    "primary_indigo": "#1A1A40",
+    "cosmic_blue": "#0F0E17",
+    "deep_purple": "#27005D",
+    "royal_purple": "#4F1787",
+    "celestial_gold": "#FFD166",
+    "starlight_gold": "#F9A826",
+    "accent_indigo": "#3F2E56"
+  },
+  "squads": {
+    "squad_a_architecture": {
+      "name": "Squad A: Core Architecture & System Contracts",
+      "count": 4,
+      "agents": [
+        {
+          "id": "AGENT-01",
+          "role": "Chief System Architect",
+          "codename": "SystemArchitect",
+          "wave": 1,
+          "focus": "Overall system topology, API contract standards, schema alignment between React, Laravel, and MySQL."
+        },
+        {
+          "id": "AGENT-02",
+          "role": "Domain & Astrological Ontologist",
+          "codename": "AstroDomainArchitect",
+          "wave": 1,
+          "focus": "Zodiac signs, planetary rulers, elemental triplicities, modalities, and celestial charts for the C.A.M. club."
+        },
+        {
+          "id": "AGENT-03",
+          "role": "Security & RBAC Specifier",
+          "codename": "SecuritySpecifier",
+          "wave": 1,
+          "focus": "RBAC policy definitions (SuperAdmin, Officer, Member, Guest), token lifecycles, and audit policies."
+        },
+        {
+          "id": "AGENT-04",
+          "role": "API Contract & Serialization Engineer",
+          "codename": "ApiContractEngineer",
+          "wave": 1,
+          "focus": "OpenAPI specifications, JSON:API response formats, pagination conventions, and TypeScript-to-PHP DTOs."
+        }
+      ]
+    },
+    "squad_b_design_system": {
+      "name": "Squad B: Celestial Design System & UX",
+      "count": 5,
+      "agents": [
+        {
+          "id": "AGENT-05",
+          "role": "Cosmic Palette & Token Engineer",
+          "codename": "DesignTokenEngineer",
+          "wave": 1,
+          "focus": "Tokens for Blue, Gold, Indigo, Purple palette, typography, glassmorphism blur tokens, and contrast ratios."
+        },
+        {
+          "id": "AGENT-06",
+          "role": "Astrological Component Architect",
+          "codename": "ComponentArchitect",
+          "wave": 2,
+          "focus": "Design specs for zodiac cards, star-chart visualizers, celestial buttons, badges, modals, and navbars."
+        },
+        {
+          "id": "AGENT-07",
+          "role": "Celestial Motion & Micro-interaction Lead",
+          "codename": "MotionDesigner",
+          "wave": 2,
+          "focus": "Orbital animations, constellation SVG connections, shimmer effects, and starfield canvas backgrounds."
+        },
+        {
+          "id": "AGENT-08",
+          "role": "Admin UX & Information Architect",
+          "codename": "AdminUXArchitect",
+          "wave": 2,
+          "focus": "Roster management flows, astrological distribution graphs, meeting scheduler, and executive dashboards."
+        },
+        {
+          "id": "AGENT-09",
+          "role": "Accessibility & Theme Adaptability Lead",
+          "codename": "A11yDesignEngineer",
+          "wave": 2,
+          "focus": "WCAG 2.1 AA accessibility in dark celestial mode, keyboard navigation, screen-reader friendly astrological symbols."
+        }
+      ]
+    },
+    "squad_c_react_frontend": {
+      "name": "Squad C: React Frontend Application",
+      "count": 7,
+      "agents": [
+        {
+          "id": "AGENT-10",
+          "role": "Frontend Core & App Shell Engineer",
+          "codename": "FrontendCoreEngineer",
+          "wave": 2,
+          "focus": "Vite/React SPA setup, router configuration, Tailwind / CSS variables integration, and layout wrappers."
+        },
+        {
+          "id": "AGENT-11",
+          "role": "Public Astro-Portal Developer",
+          "codename": "PublicPortalDeveloper",
+          "wave": 3,
+          "focus": "Club hero page, Cosmic Astrological Minds mission statement, event teaser, and join club form."
+        },
+        {
+          "id": "AGENT-12",
+          "role": "Interactive Zodiac & Celestial Map Developer",
+          "codename": "CelestialMapDeveloper",
+          "wave": 3,
+          "focus": "Interactive 12-sign zodiac wheel, birth sign explorer, and dynamic club horoscope preview."
+        },
+        {
+          "id": "AGENT-13",
+          "role": "Admin Dashboard Core Lead",
+          "codename": "AdminDashboardLead",
+          "wave": 3,
+          "focus": "Administrative layout, quick metrics (member count, sign distribution, upcoming sessions), alerts."
+        },
+        {
+          "id": "AGENT-14",
+          "role": "Member Directory & Roster UI Engineer",
+          "codename": "MemberDirectoryUIEngineer",
+          "wave": 3,
+          "focus": "Searchable member table with sign filtering, CSV export/import triggers, and member edit modals."
+        },
+        {
+          "id": "AGENT-15",
+          "role": "Authentication & Session UI Specialist",
+          "codename": "AuthUIEngineer",
+          "wave": 3,
+          "focus": "Login / Register screens, JWT/Sanctum bearer token handling, protected route guards, and logout flow."
+        },
+        {
+          "id": "AGENT-16",
+          "role": "API Client & State Sync Engineer",
+          "codename": "StateSyncEngineer",
+          "wave": 3,
+          "focus": "Axios client / TanStack Query hooks, query cache management, toast notifications, error handling."
+        }
+      ]
+    },
+    "squad_d_laravel_backend": {
+      "name": "Squad D: PHP Laravel Backend Engineering",
+      "count": 7,
+      "agents": [
+        {
+          "id": "AGENT-17",
+          "role": "Laravel Kernel & Route Architect",
+          "codename": "LaravelKernelArchitect",
+          "wave": 2,
+          "focus": "Application structure, middleware stack, API routing `/api/v1`, CORS configuration, and exception handling."
+        },
+        {
+          "id": "AGENT-18",
+          "role": "Authentication & Sanctum Specialist",
+          "codename": "SanctumAuthEngineer",
+          "wave": 3,
+          "focus": "Laravel Sanctum token authentication, login, registration, token refresh, and password security."
+        },
+        {
+          "id": "AGENT-19",
+          "role": "RBAC & Authorization Policy Engineer",
+          "codename": "RBACPolicyEngineer",
+          "wave": 3,
+          "focus": "Laravel Gates, Policies, and middleware for role-based permissions (Admin, Officer, Member)."
+        },
+        {
+          "id": "AGENT-20",
+          "role": "Member Management & CSV Ingestion Service",
+          "codename": "MemberServiceEngineer",
+          "wave": 3,
+          "focus": "Member Eloquent model, CRUD controller, validation FormRequests, and ingestion engine for members.csv."
+        },
+        {
+          "id": "AGENT-21",
+          "role": "Astrology & Zodiac Domain Service",
+          "codename": "AstrologyServiceEngineer",
+          "wave": 3,
+          "focus": "Zodiac sign logic, planetary calculation helpers, elemental affinities, and daily club insights."
+        },
+        {
+          "id": "AGENT-22",
+          "role": "Event & Meeting Management API",
+          "codename": "EventApiEngineer",
+          "wave": 3,
+          "focus": "Club stargazing sessions, workshops, guest lectures, RSVP tracking, and calendar feeds."
+        },
+        {
+          "id": "AGENT-23",
+          "role": "Audit Trail & Activity Logger",
+          "codename": "AuditLoggerEngineer",
+          "wave": 3,
+          "focus": "Logging administrative changes, member signups, role updates, and security events."
+        }
+      ]
+    },
+    "squad_e_database": {
+      "name": "Squad E: MySQL Database & Data Pipeline",
+      "count": 5,
+      "agents": [
+        {
+          "id": "AGENT-24",
+          "role": "MySQL Relational Modeler",
+          "codename": "MySQLSchemaModeler",
+          "wave": 2,
+          "focus": "Normalized relational schema: users, members, zodiac_signs, events, rsvps, audit_logs."
+        },
+        {
+          "id": "AGENT-25",
+          "role": "Laravel Migration & Integrity Engineer",
+          "codename": "MigrationEngineer",
+          "wave": 2,
+          "focus": "Declarative Laravel migrations, foreign keys, cascading deletes, and column constraints."
+        },
+        {
+          "id": "AGENT-26",
+          "role": "Zodiac & Member Seeder Engineer",
+          "codename": "DatabaseSeederEngineer",
+          "wave": 2,
+          "focus": "Initial data seeders for all 12 zodiac archetypes and initial seed load from members.csv."
+        },
+        {
+          "id": "AGENT-27",
+          "role": "Query Optimization & Indexing Specialist",
+          "codename": "QueryOptimizer",
+          "wave": 4,
+          "focus": "Performance indexes on member email, sign_id, role, and event dates."
+        },
+        {
+          "id": "AGENT-28",
+          "role": "Database Backup & Resilience Engineer",
+          "codename": "DBBackupEngineer",
+          "wave": 4,
+          "focus": "Automated mysqldump scripts, backup restoration test procedures, and data safety."
+        }
+      ]
+    },
+    "squad_f_devops": {
+      "name": "Squad F: Cloud DevOps & Infrastructure (DevOps Specialists)",
+      "count": 4,
+      "agents": [
+        {
+          "id": "AGENT-29",
+          "role": "Containerization & Docker Orchestrator",
+          "codename": "DockerContainerEngineer",
+          "wave": 2,
+          "focus": "Multi-container Docker Compose environment uniting React, Laravel PHP 8.5, MySQL 8.0, and Nginx."
+        },
+        {
+          "id": "AGENT-30",
+          "role": "Nginx Gateway & Reverse Proxy Engineer",
+          "codename": "NginxGatewayEngineer",
+          "wave": 2,
+          "focus": "Reverse proxy routing frontend SPA and `/api` backend requests, SSL/TLS termination, HTTP security headers."
+        },
+        {
+          "id": "AGENT-31",
+          "role": "CI/CD Pipeline & Automation Architect",
+          "codename": "CICDPipelineArchitect",
+          "wave": 4,
+          "focus": "GitHub Actions workflows for automated linting, test suites, container builds, and deployment verification."
+        },
+        {
+          "id": "AGENT-32",
+          "role": "Cloud Infrastructure & Deployment Orchestrator",
+          "codename": "CloudDeployOrchestrator",
+          "wave": 4,
+          "focus": "Cloud-ready deployment recipes (AWS/GCP/DigitalOcean/Render/Railway), env secret management, and healthchecks."
+        }
+      ]
+    }
+  }
+}
