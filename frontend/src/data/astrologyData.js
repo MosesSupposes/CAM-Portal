@@ -33,7 +33,7 @@ export const HOUSES = [
 export const INITIAL_MEMBERS = [
   { id: 1, name: "Momo Samuel", email: "theCodingShaman@gmail.com", phone: "(929) 389-7608", gender: "NB/F", sign: "Virgo", role: "officer", status: "active" },
   { id: 2, name: "Cam", email: "cam@cosmicminds.club", phone: "—", gender: "NB/M", sign: "Leo", role: "officer", status: "active" },
-  { id: 3, name: "Mimi", email: "mimi@cosmicminds.club", phone: "—", gender: "F", sign: "Aquarius", role: "member", status: "active" },
+  { id: 3, name: "Mimi", email: "mimi@cosmicminds.club", phone: "—", gender: "F", sign: "Aquarius", role: "officer", status: "active" },
   { id: 4, name: "Charlie Huerrera", email: "charlie.h@cosmicminds.club", phone: "—", gender: "M", sign: "Scorpio", role: "member", status: "active" }
 ];
 

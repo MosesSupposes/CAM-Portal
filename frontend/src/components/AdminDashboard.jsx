@@ -108,7 +108,7 @@ export default function AdminDashboard() {
           <div style={{ fontSize: '36px', fontWeight: '700', fontFamily: 'var(--display)', color: 'var(--ink)', marginTop: '4px' }}>
             {members.filter(m => m.role === 'officer').length}
           </div>
-          <span style={{ fontSize: '13px', color: 'var(--muted)' }}>Momo Samuel, Cam</span>
+          <span style={{ fontSize: '13px', color: 'var(--muted)' }}>Momo, Cam, Mimi</span>
         </div>
 
         <div className="panel" style={{ padding: '20px' }}>
