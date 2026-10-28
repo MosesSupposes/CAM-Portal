@@ -56,7 +56,7 @@ function getMembersFromCsv($csvPath) {
             $phone = trim($row[2]) ?: "—";
             $gender = trim($row[3]) ?: "NB";
             $sign = trim($row[4]);
-            $role = ($name === 'Momo Samuel' || $name === 'Cam') ? 'officer' : 'member';
+            $role = ($name === 'Momo Samuel' || $name === 'Cam' || $name === 'Mimi') ? 'officer' : 'member';
 
             $members[] = [
                 'id' => $id++,
