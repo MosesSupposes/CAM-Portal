@@ -12,7 +12,11 @@ class Member extends Model
     protected $table = 'members';
 
     protected $fillable = [
-        'user_id',
+        'username',
+        'student_id',
+        'password_hash',
+        'account_role',
+        'import_source_key',
         'full_name',
         'email',
         'phone',
@@ -21,6 +25,13 @@ class Member extends Model
         'zodiac_sign_name',
         'club_status',
         'bio',
+        'email_verified_at',
+        'remember_token',
+    ];
+
+    protected $hidden = [
+        'password_hash',
+        'remember_token',
     ];
 
     public function zodiacSign()
@@ -28,9 +39,19 @@ class Member extends Model
         return $this->belongsTo(ZodiacSign::class, 'zodiac_sign_id');
     }
 
-    public function user()
+    public function apiTokens()
     {
-        return $this->belongsTo(User::class);
+        return $this->hasMany(ApiToken::class);
+    }
+
+    public function savedEntries()
+    {
+        return $this->hasMany(MemberEntry::class);
+    }
+
+    public function createdEvents()
+    {
+        return $this->hasMany(Event::class, 'created_by_member_id');
     }
 
     public function rsvps()

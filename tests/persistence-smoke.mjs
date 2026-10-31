@@ -32,15 +32,15 @@ check(health.status === 200 && health.data.status === 'healthy', 'API health');
 const members = await call('/members');
 check(members.status === 200 && members.data.total >= 4, 'shared member data reads from MySQL');
 
-const accountA = await call('/auth/register', 'POST', { username, student_id: studentId, name: 'Persistence Test A', password });
+const accountA = await call('/auth/register', 'POST', { username, student_id: studentId, name: 'Persistence Test A', email: `${username}@example.test`, gender: 'Female', sign: 'Virgo', password });
 check(accountA.status === 201, 'account registration');
-const accountB = await call('/auth/register', 'POST', { username: `${username}b`, student_id: `${studentId}B`, name: 'Persistence Test B', password });
+const accountB = await call('/auth/register', 'POST', { username: `${username}b`, student_id: `${studentId}B`, name: 'Persistence Test B', email: `${username}b@example.test`, gender: 'Male', sign: 'Leo', password });
 check(accountB.status === 201, 'second account registration');
 const tokenA = accountA.data.token;
 const tokenB = accountB.data.token;
 
-check((await call('/auth/register', 'POST', { username, student_id: `${studentId}C`, name: 'Duplicate User', password })).status === 409, 'duplicate username is rejected');
-check((await call('/auth/register', 'POST', { username: `${username}c`, student_id: studentId, name: 'Duplicate Student ID', password })).status === 409, 'duplicate Student ID is rejected');
+check((await call('/auth/register', 'POST', { username, student_id: `${studentId}C`, name: 'Duplicate User', email: `dupe-${username}@example.test`, gender: 'Female', sign: 'Virgo', password })).status === 409, 'duplicate username is rejected');
+check((await call('/auth/register', 'POST', { username: `${username}c`, student_id: studentId, name: 'Duplicate Student ID', email: `dupe-id-${username}@example.test`, gender: 'Female', sign: 'Virgo', password })).status === 409, 'duplicate Student ID is rejected');
 check((await call('/entries')).status === 401, 'entries require authentication');
 check((await call('/entries/house_2', 'PUT', { note: 'saved across sessions' }, tokenA)).status === 200, 'entry saves');
 
@@ -58,4 +58,4 @@ check(studentLogin.status === 200 && studentReloaded.data.data.house_2.note === 
 check((await call('/auth/logout', 'POST', {}, tokenA)).status === 200, 'logout succeeds');
 check((await call('/entries', 'GET', undefined, tokenA)).status === 401, 'logout revokes token');
 
-console.log(`CLEANUP_USERS=${username},${username}b`);
+console.log(`CLEANUP_MEMBER_IDS=${accountA.data.user.id},${accountB.data.user.id}`);

@@ -14,12 +14,7 @@ INSERT INTO `zodiac_signs` (`id`, `name`, `symbol`, `element`, `modality`, `ruli
 (12, 'Pisces', '♓', 'Water', 'Mutable', 'Neptune / Jupiter', 'Feb 19 - Mar 20', 'Compassionate, artistic, intuitive, gentle')
 ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
 
--- Seed Initial C.A.M. Members imported from members.csv
-INSERT INTO `members` (`full_name`, `email`, `phone`, `gender_identity`, `zodiac_sign_id`, `zodiac_sign_name`, `club_status`) VALUES
-('Momo Samuel', 'theCodingShaman@gmail.com', '(929) 389-7608', 'NB/F', 6, 'Virgo', 'officer'),
-('Cam', NULL, NULL, 'NB/M', 5, 'Leo', 'officer'),
-('Mimi', NULL, NULL, 'F', 11, 'Aquarius', 'active'),
-('Charlie Huerrera', NULL, NULL, 'M', 8, 'Scorpio', 'active');
+-- Import members.csv with `php scripts/import-members.php` after schema setup.
 
 -- Seed upcoming events
 INSERT INTO `events` (`title`, `slug`, `description`, `event_type`, `location`, `event_date`, `celestial_alignment`) VALUES

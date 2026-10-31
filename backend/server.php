@@ -42,49 +42,7 @@ $signs = [
     ["id" => 12, "name" => "Pisces", "symbol" => "♓︎", "element" => "water", "modality" => "Mutable", "ruler" => "Neptune", "dates" => "Feb 19 - Mar 20"]
 ];
 
-// Helper to load members from members.csv
-function getMembersFromCsv($csvPath) {
-    $members = [];
-    if (file_exists($csvPath)) {
-        $handle = fopen($csvPath, "r");
-        $header = fgetcsv($handle, 0, ",", '"', "\\");
-        $id = 1;
-        while (($row = fgetcsv($handle, 0, ",", '"', "\\")) !== false) {
-            if (count($row) < 5) continue;
-            $name = trim($row[0]);
-            $email = trim($row[1]) ?: "—";
-            $phone = trim($row[2]) ?: "—";
-            $gender = trim($row[3]) ?: "NB";
-            $sign = trim($row[4]);
-            $role = ($name === 'Momo Samuel' || $name === 'Cam' || $name === 'Mimi') ? 'officer' : 'member';
-
-            $members[] = [
-                'id' => $id++,
-                'name' => $name,
-                'email' => $email,
-                'phone' => $phone,
-                'gender' => $gender,
-                'sign' => $sign,
-                'role' => $role,
-                'status' => 'active'
-            ];
-        }
-        fclose($handle);
-    }
-    return $members;
-}
-
-$csvFile = $workspaceDir . '/members.csv';
-$members = getMembersFromCsv($csvFile);
-
-// Store runtime state in /tmp/cam_state.json if created
-$stateFile = sys_get_temp_dir() . '/cam_runtime_members.json';
-if (file_exists($stateFile)) {
-    $savedMembers = json_decode(file_get_contents($stateFile), true);
-    if (is_array($savedMembers)) $members = $savedMembers;
-}
-
-// MySQL connection; null when DB_HOST is unset so local dev falls back to CSV/file state
+// MySQL is the single source of truth for members and account data.
 function db() {
     static $pdo = false;
     if ($pdo !== false) return $pdo;
@@ -108,12 +66,14 @@ function memberFromRow($r) {
     return [
         'id' => (int)$r['id'],
         'name' => $r['full_name'],
+        'student_id' => $r['student_id'] ?: null,
         'email' => $r['email'] ?: '—',
         'phone' => $r['phone'] ?: '—',
         'gender' => $r['gender_identity'] ?: 'NB',
         'sign' => $r['zodiac_sign_name'],
         'role' => $r['club_status'] === 'officer' ? 'officer' : 'member',
-        'status' => $r['club_status'] === 'officer' ? 'active' : $r['club_status'],
+        'account_role' => $r['account_role'] ?? 'member',
+        'status' => $r['club_status'],
     ];
 }
 
@@ -121,10 +81,11 @@ function eventFromRow($r) {
     return [
         'id' => (int)$r['id'],
         'title' => $r['title'],
-        'date' => substr($r['event_date'], 0, 16),
+        'date' => str_replace(' ', 'T', substr($r['event_date'], 0, 16)),
         'location' => $r['location'],
         'type' => $r['event_type'],
         'alignment' => $r['celestial_alignment'] ?? '',
+        'description' => $r['description'],
     ];
 }
 
@@ -140,7 +101,7 @@ function requestBody() {
 
 function issueToken(PDO $pdo, int $userId) {
     $token = bin2hex(random_bytes(32));
-    $stmt = $pdo->prepare('INSERT INTO api_tokens (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 DAY))');
+    $stmt = $pdo->prepare('INSERT INTO api_tokens (member_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 DAY))');
     $stmt->execute([$userId, hash('sha256', $token)]);
     return $token;
 }
@@ -148,7 +109,7 @@ function issueToken(PDO $pdo, int $userId) {
 function authenticatedUser(PDO $pdo) {
     $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
     if (!preg_match('/^Bearer\s+([a-f0-9]{64})$/i', $header, $match)) return null;
-    $stmt = $pdo->prepare('SELECT u.id, u.username, u.name FROM api_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ? AND t.expires_at > UTC_TIMESTAMP()');
+    $stmt = $pdo->prepare('SELECT m.id, m.username, m.student_id, m.full_name AS name, m.account_role AS role FROM api_tokens t JOIN members m ON m.id = t.member_id WHERE t.token_hash = ? AND t.expires_at > UTC_TIMESTAMP()');
     $stmt->execute([hash('sha256', $match[1])]);
     return $stmt->fetch() ?: null;
 }
@@ -178,11 +139,22 @@ if (strpos($uri, '/api/v1') === 0) {
         if (strlen($interest) > 10000) jsonResponse(["status" => "error", "message" => "Your astrology interest response must be at most 10000 characters"], 422);
         $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare('INSERT INTO users (username, student_id, name, email, password, role) VALUES (?, ?, ?, ?, ?, \'member\')');
-            $stmt->execute([$username, $studentId, $name, $email ?: null, password_hash($password, PASSWORD_DEFAULT)]);
-            $userId = (int)$pdo->lastInsertId();
-            $member = $pdo->prepare('INSERT INTO members (user_id, full_name, email, phone, gender_identity, zodiac_sign_id, zodiac_sign_name, bio, club_status) VALUES (?, ?, ?, ?, ?, (SELECT id FROM zodiac_signs WHERE name = ?), ?, ?, \'pending\')');
-            $member->execute([$userId, $name, $email, $phone ?: null, $gender, $signName, $signName, $interest ?: null]);
+            $existingMember = $pdo->prepare('SELECT id, password_hash, account_role FROM members WHERE student_id = ? FOR UPDATE');
+            $existingMember->execute([$studentId]);
+            $existingMember = $existingMember->fetch();
+            if ($existingMember && $existingMember['password_hash']) {
+                $pdo->rollBack();
+                jsonResponse(["status" => "error", "message" => "An account already exists for this Student ID"], 409);
+            }
+            if ($existingMember) {
+                $member = $pdo->prepare('UPDATE members SET username = ?, password_hash = ?, full_name = ?, email = ?, phone = COALESCE(?, phone), gender_identity = ?, zodiac_sign_id = (SELECT id FROM zodiac_signs WHERE name = ?), zodiac_sign_name = ?, bio = COALESCE(NULLIF(?, \'\'), bio) WHERE id = ?');
+                $member->execute([$username, password_hash($password, PASSWORD_DEFAULT), $name, $email, $phone ?: null, $gender, $signName, $signName, $interest, $existingMember['id']]);
+                $memberId = (int)$existingMember['id'];
+            } else {
+                $member = $pdo->prepare('INSERT INTO members (username, student_id, password_hash, account_role, full_name, email, phone, gender_identity, zodiac_sign_id, zodiac_sign_name, bio, club_status) VALUES (?, ?, ?, \'member\', ?, ?, ?, ?, (SELECT id FROM zodiac_signs WHERE name = ?), ?, ?, \'pending\')');
+                $member->execute([$username, $studentId, password_hash($password, PASSWORD_DEFAULT), $name, $email ?: null, $phone ?: null, $gender, $signName, $signName, $interest ?: null]);
+                $memberId = (int)$pdo->lastInsertId();
+            }
             $pdo->commit();
         } catch (PDOException $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -190,20 +162,21 @@ if (strpos($uri, '/api/v1') === 0) {
             error_log('Account registration failed: ' . $e->getMessage());
             jsonResponse(["status" => "error", "message" => "Account could not be created"], 500);
         }
-        jsonResponse(["status" => "success", "token" => issueToken($pdo, $userId), "user" => ["id" => $userId, "username" => $username, "student_id" => $studentId, "name" => $name]], 201);
+        $role = $existingMember['account_role'] ?? 'member';
+        jsonResponse(["status" => "success", "token" => issueToken($pdo, $memberId), "user" => ["id" => $memberId, "username" => $username, "student_id" => $studentId, "name" => $name, "role" => $role]], 201);
     }
 
     if ($uri === '/api/v1/auth/login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$pdo) jsonResponse(["status" => "error", "message" => "Database unavailable"], 503);
         $in = requestBody();
         $identifier = trim($in['identifier'] ?? $in['username'] ?? '');
-        $stmt = $pdo->prepare('SELECT id, username, student_id, name, password FROM users WHERE username = ? OR student_id = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id, username, student_id, full_name AS name, password_hash, account_role FROM members WHERE username = ? OR student_id = ? LIMIT 1');
         $stmt->execute([strtolower($identifier), $identifier]);
         $user = $stmt->fetch();
-        if (!$user || !password_verify($in['password'] ?? '', $user['password'])) {
+        if (!$user || !$user['password_hash'] || !password_verify($in['password'] ?? '', $user['password_hash'])) {
             jsonResponse(["status" => "error", "message" => "Invalid username or password"], 401);
         }
-        jsonResponse(["status" => "success", "token" => issueToken($pdo, (int)$user['id']), "user" => ["id" => (int)$user['id'], "username" => $user['username'], "student_id" => $user['student_id'], "name" => $user['name']]]);
+        jsonResponse(["status" => "success", "token" => issueToken($pdo, (int)$user['id']), "user" => ["id" => (int)$user['id'], "username" => $user['username'], "student_id" => $user['student_id'], "name" => $user['name'], "role" => $user['account_role']] ]);
     }
 
     if (in_array($uri, ['/api/v1/auth/me', '/api/v1/auth/logout', '/api/v1/entries'], true) || preg_match('#^/api/v1/entries/[a-z0-9_-]+$#', $uri)) {
@@ -216,7 +189,7 @@ if (strpos($uri, '/api/v1') === 0) {
             jsonResponse(["status" => "success"]);
         }
         if ($uri === '/api/v1/entries' && $_SERVER['REQUEST_METHOD'] === 'GET') {
-            $stmt = $pdo->prepare('SELECT entry_key, entry_value FROM user_entries WHERE user_id = ? ORDER BY entry_key');
+            $stmt = $pdo->prepare('SELECT entry_key, entry_value FROM member_entries WHERE member_id = ? ORDER BY entry_key');
             $stmt->execute([$user['id']]);
             $entries = [];
             foreach ($stmt->fetchAll() as $row) $entries[$row['entry_key']] = json_decode($row['entry_value'], true);
@@ -227,7 +200,7 @@ if (strpos($uri, '/api/v1') === 0) {
             if (!preg_match('/^house_[0-9]{1,2}$/', $key)) jsonResponse(["status" => "error", "message" => "Invalid entry key"], 422);
             $value = requestBody();
             if (!isset($value['note']) || !is_string($value['note']) || strlen($value['note']) > 10000) jsonResponse(["status" => "error", "message" => "Note must be text up to 10000 characters"], 422);
-            $stmt = $pdo->prepare('INSERT INTO user_entries (user_id, entry_key, entry_value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE entry_value = VALUES(entry_value)');
+            $stmt = $pdo->prepare('INSERT INTO member_entries (member_id, entry_key, entry_value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE entry_value = VALUES(entry_value)');
             $stmt->execute([$user['id'], $key, json_encode(["note" => $value['note']])]);
             jsonResponse(["status" => "success", "data" => ["key" => $key, "note" => $value['note']]]);
         }
@@ -269,143 +242,165 @@ if (strpos($uri, '/api/v1') === 0) {
     }
 
     // Members Endpoint
-    if ($uri === '/api/v1/members') {
+    if ($uri === '/api/v1/members' || preg_match('#^/api/v1/members/([0-9]+)$#', $uri, $memberMatch)) {
         $pdo = db();
-        if ($pdo) {
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                $in = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+        if (!$pdo) jsonResponse(["status" => "error", "message" => "Database unavailable"], 503);
+        $method = $_SERVER['REQUEST_METHOD'];
+        $memberId = isset($memberMatch[1]) ? (int)$memberMatch[1] : null;
+        if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
+            $actor = authenticatedUser($pdo);
+            if (!$actor) jsonResponse(["status" => "error", "message" => "Authentication required"], 401);
+            if ($actor['role'] !== 'officer') jsonResponse(["status" => "error", "message" => "Officer access required"], 403);
+        }
+        if ($method === 'DELETE' && $memberId !== null) {
+            if ((int)$actor['id'] === $memberId) jsonResponse(["status" => "error", "message" => "You cannot delete your own account"], 409);
+            $stmt = $pdo->prepare('SELECT account_role FROM members WHERE id = ?');
+            $stmt->execute([$memberId]);
+            $memberToDelete = $stmt->fetch();
+            if (!$memberToDelete) jsonResponse(["status" => "error", "message" => "Member not found"], 404);
+            if ($memberToDelete['account_role'] === 'officer') {
+                $officerCount = (int)$pdo->query("SELECT COUNT(*) FROM members WHERE account_role = 'officer'")->fetchColumn();
+                if ($officerCount <= 1) jsonResponse(["status" => "error", "message" => "You cannot delete the last officer account"], 409);
+            }
+            $stmt = $pdo->prepare('DELETE FROM members WHERE id = ?');
+            $stmt->execute([$memberId]);
+            jsonResponse(["status" => "success", "message" => "Member deleted", "data" => ["id" => $memberId]]);
+        }
+        if ($method === 'POST') {
+                $in = requestBody();
                 $name = trim($in['name'] ?? '');
                 $signName = $in['sign'] ?? 'Virgo';
-                if ($name === '' || !in_array($signName, array_column($signs, 'name'), true)) {
-                    http_response_code(422);
-                    echo json_encode(["status" => "error", "message" => "Valid name and sign are required"]);
-                    exit;
-                }
+                $gender = $in['gender'] ?? '';
+                $status = $in['status'] ?? (($in['role'] ?? '') === 'officer' ? 'officer' : 'active');
+                if ($name === '' || strlen($name) > 255 || !in_array($signName, array_column($signs, 'name'), true) || !in_array($gender, ['Male', 'Female', 'Non-binary'], true) || !in_array($status, ['active', 'pending', 'alumni', 'officer'], true)) jsonResponse(["status" => "error", "message" => "Valid name, gender, sun sign, and member status are required"], 422);
                 $email = trim($in['email'] ?? '');
                 $phone = trim($in['phone'] ?? '');
+                if (($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) || strlen($phone) > 50) jsonResponse(["status" => "error", "message" => "Enter a valid email and a phone number of at most 50 characters"], 422);
                 $stmt = $pdo->prepare('INSERT INTO members (full_name, email, phone, gender_identity, zodiac_sign_id, zodiac_sign_name, club_status) VALUES (?, ?, ?, ?, (SELECT id FROM zodiac_signs WHERE name = ?), ?, ?)');
                 $stmt->execute([
                     $name,
                     ($email === '' || $email === '—') ? null : $email,
                     ($phone === '' || $phone === '—') ? null : $phone,
-                    $in['gender'] ?? 'NB',
+                    $gender,
                     $signName,
                     $signName,
-                    ($in['role'] ?? '') === 'officer' ? 'officer' : 'active',
+                    $status,
                 ]);
                 $row = $pdo->query('SELECT * FROM members WHERE id = ' . (int)$pdo->lastInsertId())->fetch();
-                http_response_code(201);
-                echo json_encode(["status" => "success", "message" => "Member added to C.A.M.", "data" => memberFromRow($row)]);
-                exit;
-            }
-            $sql = 'SELECT m.* FROM members m LEFT JOIN zodiac_signs z ON z.id = m.zodiac_sign_id WHERE 1=1';
-            $params = [];
-            $element = $_GET['element'] ?? null;
-            if ($element && $element !== 'all') {
-                $sql .= ' AND z.element = ?';
-                $params[] = $element;
-            }
-            $q = trim($_GET['search'] ?? '');
-            if ($q !== '') {
-                $sql .= ' AND (m.full_name LIKE ? OR m.zodiac_sign_name LIKE ?)';
-                $params[] = $params[] = '%' . $q . '%';
-            }
-            $stmt = $pdo->prepare($sql . ' ORDER BY m.created_at DESC, m.id DESC');
-            $stmt->execute($params);
-            $rows = array_map('memberFromRow', $stmt->fetchAll());
-            echo json_encode(["status" => "success", "total" => count($rows), "data" => $rows], JSON_PRETTY_PRINT);
-            exit;
+                jsonResponse(["status" => "success", "message" => "Member added to C.A.M.", "data" => memberFromRow($row)], 201);
         }
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
-            $new = [
-                'id' => time(),
-                'name' => $input['name'] ?? 'New Member',
-                'email' => $input['email'] ?? '—',
-                'phone' => $input['phone'] ?? '—',
-                'gender' => $input['gender'] ?? 'NB',
-                'sign' => $input['sign'] ?? 'Virgo',
-                'role' => $input['role'] ?? 'member',
-                'status' => 'active'
-            ];
-            array_unshift($members, $new);
-            file_put_contents($stateFile, json_encode($members));
-            http_response_code(201);
-            echo json_encode(["status" => "success", "message" => "Member added to C.A.M.", "data" => $new]);
-            exit;
-        }
-
-        // Filter by element or query
-        $element = $_GET['element'] ?? null;
-        $q = strtolower($_GET['search'] ?? '');
-        $filtered = array_values(array_filter($members, function($m) use ($signs, $element, $q) {
-            $signMeta = null;
-            foreach ($signs as $s) {
-                if (strtolower($s['name']) === strtolower($m['sign'])) {
-                    $signMeta = $s;
-                    break;
+        if ($method === 'PUT' && $memberId !== null) {
+                $in = requestBody();
+                $name = trim($in['name'] ?? '');
+                $email = trim($in['email'] ?? '');
+                $phone = trim($in['phone'] ?? '');
+                $gender = $in['gender'] ?? '';
+                $signName = $in['sign'] ?? '';
+                $status = $in['status'] ?? '';
+                $accountRole = $in['account_role'] ?? null;
+                if ($accountRole !== null && $actor['role'] !== 'officer') jsonResponse(["status" => "error", "message" => "Officer access required to change account access"], 403);
+                if ($accountRole !== null && !in_array($accountRole, ['officer', 'member', 'guest'], true)) jsonResponse(["status" => "error", "message" => "Invalid account access role"], 422);
+                if ($name === '' || strlen($name) > 255 || ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) || strlen($phone) > 50 || !in_array($gender, ['Male', 'Female', 'Non-binary'], true) || !in_array($signName, array_column($signs, 'name'), true) || !in_array($status, ['active', 'pending', 'alumni', 'officer'], true)) jsonResponse(["status" => "error", "message" => "Valid name, email, phone, gender, sun sign, and member status are required"], 422);
+                $sql = 'UPDATE members SET full_name = ?, email = ?, phone = ?, gender_identity = ?, zodiac_sign_id = (SELECT id FROM zodiac_signs WHERE name = ?), zodiac_sign_name = ?, club_status = ?';
+                $params = [$name, $email ?: null, $phone ?: null, $gender, $signName, $signName, $status];
+                if ($accountRole !== null) {
+                    $sql .= ', account_role = ?';
+                    $params[] = $accountRole;
                 }
-            }
-            if ($element && $element !== 'all' && (!$signMeta || $signMeta['element'] !== $element)) {
-                return false;
-            }
-            if ($q && strpos(strtolower($m['name']), $q) === false && strpos(strtolower($m['sign']), $q) === false) {
-                return false;
-            }
-            return true;
-        }));
-
-        echo json_encode([
-            "status" => "success",
-            "total" => count($filtered),
-            "data" => $filtered
-        ], JSON_PRETTY_PRINT);
+                $sql .= ' WHERE id = ?';
+                $params[] = $memberId;
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $stmt = $pdo->prepare('SELECT * FROM members WHERE id = ?');
+                $stmt->execute([$memberId]);
+                $row = $stmt->fetch();
+                if (!$row) jsonResponse(["status" => "error", "message" => "Member not found"], 404);
+                jsonResponse(["status" => "success", "message" => "Member updated", "data" => memberFromRow($row)]);
+        }
+        if ($method !== 'GET') jsonResponse(["status" => "error", "message" => "Method not allowed"], 405);
+        $sql = 'SELECT m.* FROM members m LEFT JOIN zodiac_signs z ON z.id = m.zodiac_sign_id WHERE 1=1';
+        $params = [];
+        $element = $_GET['element'] ?? null;
+        if ($element && $element !== 'all') {
+            $sql .= ' AND z.element = ?';
+            $params[] = $element;
+        }
+        $q = trim($_GET['search'] ?? '');
+        if ($q !== '') {
+            $sql .= ' AND (m.full_name LIKE ? OR m.zodiac_sign_name LIKE ?)';
+            $params[] = $params[] = '%' . $q . '%';
+        }
+        $stmt = $pdo->prepare($sql . ' ORDER BY m.created_at DESC, m.id DESC');
+        $stmt->execute($params);
+        $rows = array_map('memberFromRow', $stmt->fetchAll());
+        echo json_encode(["status" => "success", "total" => count($rows), "data" => $rows], JSON_PRETTY_PRINT);
         exit;
     }
 
-    // Events Endpoint
-    if ($uri === '/api/v1/events') {
+    // Event reads are public for the portal; mutations require an officer account.
+    if ($uri === '/api/v1/events' || preg_match('#^/api/v1/events/([0-9]+)$#', $uri, $eventMatch)) {
         $pdo = db();
-        if ($pdo) {
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                $in = json_decode(file_get_contents('php://input'), true) ?: $_POST;
-                $title = trim($in['title'] ?? '');
-                $date = strtotime($in['date'] ?? '');
-                if ($title === '' || $date === false) {
-                    http_response_code(422);
-                    echo json_encode(["status" => "error", "message" => "Title and a valid date are required"]);
-                    exit;
-                }
-                $type = in_array($in['type'] ?? '', ['meeting', 'stargazing', 'workshop', 'social', 'transits'], true) ? $in['type'] : 'meeting';
-                $alignment = trim($in['alignment'] ?? '');
-                $stmt = $pdo->prepare('INSERT INTO events (title, slug, description, event_type, location, event_date, celestial_alignment) VALUES (?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([
-                    $title,
-                    trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($title)), '-') . '-' . bin2hex(random_bytes(3)),
-                    $alignment ?: $title,
-                    $type,
-                    trim($in['location'] ?? '') ?: 'TBA',
-                    date('Y-m-d H:i:s', $date),
-                    $alignment ?: null,
-                ]);
-                $row = $pdo->query('SELECT * FROM events WHERE id = ' . (int)$pdo->lastInsertId())->fetch();
-                http_response_code(201);
-                echo json_encode(["status" => "success", "data" => eventFromRow($row)]);
-                exit;
-            }
-            $rows = array_map('eventFromRow', $pdo->query('SELECT * FROM events ORDER BY event_date')->fetchAll());
-            echo json_encode(["status" => "success", "data" => $rows], JSON_PRETTY_PRINT);
-            exit;
+        if (!$pdo) jsonResponse(["status" => "error", "message" => "Database unavailable"], 503);
+        $method = $_SERVER['REQUEST_METHOD'];
+        $eventId = isset($eventMatch[1]) ? (int)$eventMatch[1] : null;
+        $actor = null;
+        if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
+            $actor = authenticatedUser($pdo);
+            if (!$actor) jsonResponse(["status" => "error", "message" => "Authentication required"], 401);
+            if ($actor['role'] !== 'officer') jsonResponse(["status" => "error", "message" => "Officer access required"], 403);
         }
 
-        $events = [
-            ["id" => 1, "title" => "Full Moon in Scorpio Night Vigil", "date" => "2026-11-04 20:00", "location" => "Observatory Quad", "type" => "stargazing"],
-            ["id" => 2, "title" => "Introduction to Natal Wheel Calculations", "date" => "2026-11-12 18:30", "location" => "Astrolab Hall 204", "type" => "workshop"],
-            ["id" => 3, "title" => "Zodiac Synastry & Compatibility Circle", "date" => "2026-11-20 19:00", "location" => "Student Union Lounge", "type" => "social"]
-        ];
-        echo json_encode(["status" => "success", "data" => $events], JSON_PRETTY_PRINT);
-        exit;
+        if ($method === 'POST' || $method === 'PUT') {
+            if ($method === 'PUT' && $eventId === null) jsonResponse(["status" => "error", "message" => "Event ID is required"], 404);
+            $in = requestBody();
+            $title = trim($in['title'] ?? '');
+            $location = trim($in['location'] ?? '');
+            $dateInput = trim($in['date'] ?? '');
+            $type = $in['type'] ?? '';
+            $alignment = trim($in['alignment'] ?? '');
+            $description = trim($in['description'] ?? '');
+            $validTypes = ['meeting', 'stargazing', 'workshop', 'social', 'transits'];
+            $date = DateTimeImmutable::createFromFormat('!Y-m-d\\TH:i', $dateInput);
+            $dateErrors = DateTimeImmutable::getLastErrors();
+            if ($title === '' || strlen($title) > 255 || $location === '' || strlen($location) > 255 || !in_array($type, $validTypes, true) || !$date || ($dateErrors && ($dateErrors['warning_count'] || $dateErrors['error_count'])) || $date->format('Y-m-d\\TH:i') !== $dateInput || strlen($alignment) > 255 || strlen($description) > 10000) {
+                jsonResponse(["status" => "error", "message" => "Enter a valid title, date, location, event type, alignment, and description"], 422);
+            }
+            $dbDate = $date->format('Y-m-d H:i:s');
+            if ($method === 'POST') {
+                $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($title)), '-') . '-' . bin2hex(random_bytes(4));
+                $stmt = $pdo->prepare('INSERT INTO events (title, slug, description, event_type, location, event_date, celestial_alignment, created_by_member_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$title, $slug, $description ?: $title, $type, $location, $dbDate, $alignment ?: null, $actor['id']]);
+                $eventId = (int)$pdo->lastInsertId();
+                $statusCode = 201;
+            } else {
+                $stmt = $pdo->prepare('UPDATE events SET title = ?, description = ?, event_type = ?, location = ?, event_date = ?, celestial_alignment = ? WHERE id = ?');
+                $stmt->execute([$title, $description ?: $title, $type, $location, $dbDate, $alignment ?: null, $eventId]);
+                $statusCode = 200;
+            }
+            $stmt = $pdo->prepare('SELECT * FROM events WHERE id = ?');
+            $stmt->execute([$eventId]);
+            $row = $stmt->fetch();
+            if (!$row) jsonResponse(["status" => "error", "message" => "Event not found"], 404);
+            jsonResponse(["status" => "success", "data" => eventFromRow($row)], $statusCode);
+        }
+
+        if ($method === 'DELETE' && $eventId !== null) {
+            $stmt = $pdo->prepare('DELETE FROM events WHERE id = ?');
+            $stmt->execute([$eventId]);
+            if ($stmt->rowCount() === 0) jsonResponse(["status" => "error", "message" => "Event not found"], 404);
+            jsonResponse(["status" => "success", "data" => ["id" => $eventId]]);
+        }
+
+        if ($method === 'GET' && $eventId !== null) {
+            $stmt = $pdo->prepare('SELECT * FROM events WHERE id = ?');
+            $stmt->execute([$eventId]);
+            $row = $stmt->fetch();
+            if (!$row) jsonResponse(["status" => "error", "message" => "Event not found"], 404);
+            jsonResponse(["status" => "success", "data" => eventFromRow($row)]);
+        }
+        if ($method !== 'GET') jsonResponse(["status" => "error", "message" => "Method not allowed"], 405);
+        $rows = array_map('eventFromRow', $pdo->query('SELECT * FROM events ORDER BY event_date')->fetchAll());
+        jsonResponse(["status" => "success", "data" => $rows]);
     }
 
     http_response_code(404);

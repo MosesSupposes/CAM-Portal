@@ -21,4 +21,9 @@ describe('roster formatting', () => {
     expect(formatCsvRow(['Smith, Jane', 'said "hello"', 'line 1\nline 2', null]))
       .toBe('"Smith, Jane","said ""hello""","line 1\nline 2",""');
   });
+
+  it('exports the assigned member ID as the first roster field', () => {
+    expect(formatCsvRow([42, 'A Member', 'member@example.edu']))
+      .toBe('"42","A Member","member@example.edu"');
+  });
 });

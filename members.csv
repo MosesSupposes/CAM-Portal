@@ -1,6 +1,6 @@
-Name, StudentID, Email, Number, Gender, Sign
+Name, StudentID, Email, Phone Number, Gender, Sun Sign
 Momo Samuel, 700742753, msamue10@dtcc.edu, (929) 389-7608, Non-binary, Virgo
-Cam, "", "", Non-binary, Leo
-Mimi, , , F, Aquarius
-Charlie Huerrera, , , M, Scorpio
+Cam, , , , , Non-binary, Leo
+Mimi, , , , , Female, Aquarius
+Charlie Herrera Juarez, , , , ,  Male, Scorpio
 

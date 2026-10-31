@@ -57,6 +57,10 @@ export async function apiPut(path, body) {
   return (await request(path, { method: 'PUT', body: JSON.stringify(body) })).data;
 }
 
+export async function apiDelete(path) {
+  return (await request(path, { method: 'DELETE' })).data;
+}
+
 export async function apiAuth(path, body) {
   return request(path, { method: 'POST', body: JSON.stringify(body) });
 }

@@ -17,60 +17,50 @@ CREATE TABLE IF NOT EXISTS `zodiac_signs` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 2. User Accounts & Authentication (Sanctum Compatible)
-CREATE TABLE IF NOT EXISTS `users` (
+-- 2. Unified club member profiles and login accounts
+CREATE TABLE IF NOT EXISTS `members` (
     `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `username` VARCHAR(50) NULL UNIQUE,
     `student_id` VARCHAR(32) NULL UNIQUE,
-    `name` VARCHAR(255) NOT NULL,
-    `email` VARCHAR(255) NULL UNIQUE,
-    `email_verified_at` TIMESTAMP NULL,
-    `password` VARCHAR(255) NOT NULL,
-    `role` ENUM('superadmin', 'officer', 'member', 'guest') DEFAULT 'member',
-    `remember_token` VARCHAR(100) NULL,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX `idx_users_role` (`role`)
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS `api_tokens` (
-    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `user_id` BIGINT UNSIGNED NOT NULL,
-    `token_hash` CHAR(64) NOT NULL UNIQUE,
-    `expires_at` DATETIME NOT NULL,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-    INDEX `idx_api_tokens_expiry` (`expires_at`)
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS `user_entries` (
-    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `user_id` BIGINT UNSIGNED NOT NULL,
-    `entry_key` VARCHAR(100) NOT NULL,
-    `entry_value` JSON NOT NULL,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY `unique_user_entry` (`user_id`, `entry_key`),
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- 3. Club Members Profiles (Incorporating members.csv)
-CREATE TABLE IF NOT EXISTS `members` (
-    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `user_id` BIGINT UNSIGNED NULL,
+    `password_hash` VARCHAR(255) NULL,
+    `account_role` ENUM('officer', 'member', 'guest') NOT NULL DEFAULT 'member',
+    `import_source_key` VARCHAR(100) NULL UNIQUE,
     `full_name` VARCHAR(255) NOT NULL,
     `email` VARCHAR(255) NULL,
     `phone` VARCHAR(50) NULL,
     `gender_identity` VARCHAR(50) NULL,
     `zodiac_sign_id` INT UNSIGNED NULL,
-    `zodiac_sign_name` VARCHAR(50) NOT NULL,
+    `zodiac_sign_name` VARCHAR(50) NOT NULL DEFAULT 'Virgo',
     `club_status` ENUM('active', 'alumni', 'pending', 'officer') DEFAULT 'active',
     `bio` TEXT NULL,
+    `email_verified_at` TIMESTAMP NULL,
+    `remember_token` VARCHAR(100) NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
     FOREIGN KEY (`zodiac_sign_id`) REFERENCES `zodiac_signs`(`id`) ON DELETE SET NULL,
     INDEX `idx_members_sign` (`zodiac_sign_name`),
-    INDEX `idx_members_status` (`club_status`)
+    INDEX `idx_members_status` (`club_status`),
+    INDEX `idx_members_account_role` (`account_role`)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS `api_tokens` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `member_id` BIGINT UNSIGNED NOT NULL,
+    `token_hash` CHAR(64) NOT NULL UNIQUE,
+    `expires_at` DATETIME NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`member_id`) REFERENCES `members`(`id`) ON DELETE CASCADE,
+    INDEX `idx_api_tokens_expiry` (`expires_at`)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS `member_entries` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `member_id` BIGINT UNSIGNED NOT NULL,
+    `entry_key` VARCHAR(100) NOT NULL,
+    `entry_value` JSON NOT NULL,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY `unique_member_entry` (`member_id`, `entry_key`),
+    FOREIGN KEY (`member_id`) REFERENCES `members`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- 4. Celestial Events & Gatherings
@@ -84,10 +74,10 @@ CREATE TABLE IF NOT EXISTS `events` (
     `event_date` DATETIME NOT NULL,
     `celestial_alignment` VARCHAR(255) NULL, -- e.g. "Full Moon in Scorpio"
     `max_attendees` INT UNSIGNED NULL,
-    `created_by` BIGINT UNSIGNED NULL,
+    `created_by_member_id` BIGINT UNSIGNED NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+    FOREIGN KEY (`created_by_member_id`) REFERENCES `members`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- 5. Event RSVPs
@@ -106,12 +96,12 @@ CREATE TABLE IF NOT EXISTS `event_rsvps` (
 -- 6. Audit & Activity Logs
 CREATE TABLE IF NOT EXISTS `audit_logs` (
     `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `user_id` BIGINT UNSIGNED NULL,
+    `member_id` BIGINT UNSIGNED NULL,
     `action` VARCHAR(255) NOT NULL,
     `entity_type` VARCHAR(100) NOT NULL,
     `entity_id` BIGINT UNSIGNED NULL,
     `details` JSON NULL,
     `ip_address` VARCHAR(45) NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
+    FOREIGN KEY (`member_id`) REFERENCES `members`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;

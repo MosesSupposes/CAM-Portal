@@ -77,63 +77,6 @@ class MemberController extends Controller
     }
 
     /**
-     * Import members from CSV (supporting members.csv format).
-     */
-    public function importCSV(Request $request): JsonResponse
-    {
-        $request->validate([
-            'csv_file' => 'required|file|mimes:csv,txt|max:5120',
-        ]);
-
-        $file = $request->file('csv_file');
-        $handle = fopen($file->getRealPath(), 'r');
-        $header = fgetcsv($handle);
-
-        $imported = 0;
-        DB::beginTransaction();
-        try {
-            while (($row = fgetcsv($handle)) !== false) {
-                if (count($row) < 5) continue;
-                // Format: Name, Email, Number, Gender, Sign
-                $name = trim($row[0]);
-                $email = trim($row[1]) ?: null;
-                $phone = trim($row[2]) ?: null;
-                $gender = trim($row[3]) ?: null;
-                $signName = trim($row[4]);
-
-                $sign = ZodiacSign::where('name', $signName)->first();
-
-                Member::updateOrCreate(
-                    ['full_name' => $name],
-                    [
-                        'email' => $email,
-                        'phone' => $phone,
-                        'gender_identity' => $gender,
-                        'zodiac_sign_name' => $signName,
-                        'zodiac_sign_id' => $sign ? $sign->id : null,
-                        'club_status' => 'active',
-                    ]
-                );
-                $imported++;
-            }
-            DB::commit();
-            fclose($handle);
-
-            return response()->json([
-                'status' => 'success',
-                'message' => "Successfully imported {$imported} members.",
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            fclose($handle);
-            return response()->json([
-                'status' => 'error',
-                'message' => 'CSV Import failed: ' . $e->getMessage(),
-            ], 422);
-        }
-    }
-
-    /**
      * Aggregated Elemental breakdown for C.A.M. dashboard.
      */
     public function analytics(): JsonResponse

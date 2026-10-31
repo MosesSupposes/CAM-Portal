@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { SIGNS, INITIAL_MEMBERS, INITIAL_EVENTS } from '../data/astrologyData';
-import { apiGet, apiPost } from '../api';
+import { apiDelete, apiGet, apiPost, apiPut } from '../api';
 import { formatCsvRow, formatGender } from './rosterFormatting';
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ user }) {
   const [members, setMembers] = useState(INITIAL_MEMBERS);
   const [events, setEvents] = useState(INITIAL_EVENTS);
 
@@ -15,13 +16,18 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [eventError, setEventError] = useState('');
+  const [editingMember, setEditingMember] = useState(null);
+  const [memberError, setMemberError] = useState('');
+  const canManageMembers = user?.role === 'officer';
 
   // New member form state
   const [newMember, setNewMember] = useState({
     name: '',
     email: '',
     phone: '',
-    gender: 'NB',
+    gender: '',
     sign: 'Virgo',
     role: 'member'
   });
@@ -32,52 +38,117 @@ export default function AdminDashboard() {
     date: '',
     location: '',
     type: 'meeting',
-    alignment: ''
+    alignment: '',
+    description: ''
   });
 
   const handleAddMember = async (e) => {
     e.preventDefault();
-    if (!newMember.name) return;
-    let added = {
-      id: Date.now(),
-      name: newMember.name,
-      email: newMember.email || '—',
-      phone: newMember.phone || '—',
-      gender: newMember.gender,
-      sign: newMember.sign,
-      role: newMember.role,
-      status: 'active'
-    };
+    setMemberError('');
     try {
-      added = await apiPost('/members', newMember);
-    } catch {
-      // API unreachable: keep the local-only entry
+      const added = await apiPost('/members', newMember);
+      setMembers(current => [added, ...current]);
+      setIsAddMemberOpen(false);
+      setNewMember({ name: '', email: '', phone: '', gender: '', sign: 'Virgo', role: 'member' });
+    } catch (error) {
+      setMemberError(error.message);
     }
-    setMembers([added, ...members]);
-    setIsAddMemberOpen(false);
-    setNewMember({ name: '', email: '', phone: '', gender: 'NB', sign: 'Virgo', role: 'member' });
+  };
+
+  const openMemberEditor = (member) => {
+    setMemberError('');
+    setEditingMember({
+      ...member,
+      email: member.email === '—' ? '' : member.email,
+      phone: member.phone === '—' ? '' : member.phone,
+    });
+  };
+
+  const handleUpdateMember = async (e) => {
+    e.preventDefault();
+    setMemberError('');
+    try {
+      const updated = await apiPut(`/members/${editingMember.id}`, editingMember);
+      setMembers(current => current.map(member => member.id === updated.id ? updated : member));
+      setEditingMember(null);
+    } catch (error) {
+      setMemberError(error.message);
+    }
+  };
+
+  const handleDeleteMember = async (member) => {
+    const confirmed = window.confirm(`Delete ${member.name}? Their login, saved chart notes, and event RSVPs will also be removed.`);
+    if (!confirmed) return;
+    setMemberError('');
+    try {
+      await apiDelete(`/members/${member.id}`);
+      setMembers(current => current.filter(entry => entry.id !== member.id));
+    } catch (error) {
+      setMemberError(error.message);
+    }
   };
 
   const handleAddEvent = async (e) => {
     e.preventDefault();
-    if (!newEvent.title) return;
-    let added = {
-      id: Date.now(),
-      ...newEvent
-    };
+    setEventError('');
     try {
-      added = await apiPost('/events', newEvent);
-    } catch {
-      // API unreachable: keep the local-only entry
+      const added = await apiPost('/events', newEvent);
+      setEvents(current => [...current, added]);
+      setIsAddEventOpen(false);
+      setNewEvent({ title: '', date: '', location: '', type: 'meeting', alignment: '', description: '' });
+    } catch (error) {
+      setEventError(error.message);
     }
-    setEvents([...events, added]);
-    setIsAddEventOpen(false);
-    setNewEvent({ title: '', date: '', location: '', type: 'meeting', alignment: '' });
   };
 
+  const openEventEditor = (event) => {
+    setEventError('');
+    setEditingEvent({ ...event, date: event.date.replace(' ', 'T').slice(0, 16) });
+  };
+
+  const handleUpdateEvent = async (e) => {
+    e.preventDefault();
+    setEventError('');
+    try {
+      const updated = await apiPut(`/events/${editingEvent.id}`, editingEvent);
+      setEvents(current => current.map(event => event.id === updated.id ? updated : event));
+      setEditingEvent(null);
+    } catch (error) {
+      setEventError(error.message);
+    }
+  };
+
+  const handleDeleteEvent = async (event) => {
+    if (!window.confirm(`Delete “${event.title}”? Associated RSVPs will also be removed.`)) return;
+    setEventError('');
+    try {
+      await apiDelete(`/events/${event.id}`);
+      setEvents(current => current.filter(entry => entry.id !== event.id));
+    } catch (error) {
+      setEventError(error.message);
+    }
+  };
+
+  const renderEventFields = (event, setEvent) => (
+    <>
+      <label>Event Title<input required maxLength="255" value={event.title} onChange={input => setEvent({ ...event, title: input.target.value })} /></label>
+      <label>Date & Time<input required type="datetime-local" value={event.date} onChange={input => setEvent({ ...event, date: input.target.value })} /></label>
+      <label>Location<input required maxLength="255" value={event.location} onChange={input => setEvent({ ...event, location: input.target.value })} /></label>
+      <label>Event Type<select required value={event.type} onChange={input => setEvent({ ...event, type: input.target.value })}>
+        <option value="meeting">Club Meeting</option>
+        <option value="stargazing">Stargazing Night</option>
+        <option value="workshop">Workshop / Lecture</option>
+        <option value="social">Social Mixer</option>
+        <option value="transits">Transits</option>
+      </select></label>
+      <label>Astrological Transit / Alignment<input maxLength="255" value={event.alignment} onChange={input => setEvent({ ...event, alignment: input.target.value })} placeholder="e.g. New Moon in Sagittarius" /></label>
+      <label>Description<textarea rows="3" maxLength="10000" value={event.description} onChange={input => setEvent({ ...event, description: input.target.value })} /></label>
+    </>
+  );
+
   const exportCSV = () => {
-    const headers = formatCsvRow(['Name', 'Email', 'Number', 'Gender', 'Sign', 'Role']);
-    const rows = members.map(m => formatCsvRow([m.name, m.email, m.phone, formatGender(m.gender), m.sign, m.role]));
+    const headers = formatCsvRow(['Member ID', 'Name', 'Email', 'Number', 'Gender', 'Sign', 'Role']);
+    const rows = members.map(m => formatCsvRow([m.id, m.name, m.email, m.phone, formatGender(m.gender), m.sign, m.role]));
     const blob = new Blob([[headers, ...rows].join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -166,11 +237,12 @@ export default function AdminDashboard() {
             <button type="button" onClick={exportCSV}>
               ⬇ Export CSV
             </button>
-            <button type="button" className="primary" onClick={() => setIsAddMemberOpen(true)}>
+            {canManageMembers && <button type="button" className="primary" onClick={() => { setMemberError(''); setIsAddMemberOpen(true); }}>
               + Add Member
-            </button>
+            </button>}
           </div>
         </div>
+        {memberError && !isAddMemberOpen && !editingMember && <p role="alert" style={{ color: 'var(--danger, #b42318)', margin: '0 0 16px' }}>{memberError}</p>}
 
         {/* Filters */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '18px' }}>
@@ -200,18 +272,20 @@ export default function AdminDashboard() {
           <table>
             <thead>
               <tr>
-                <th>Member Name</th>
-                <th>Zodiac Sign</th>
+                <th>Name</th>
+                <th>Sign</th>
                 <th>Element</th>
                 <th>Role</th>
                 <th>Gender</th>
                 <th>Contact Info</th>
                 <th>Status</th>
+                {canManageMembers && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
               {filteredMembers.map((m) => {
                 const s = SIGNS.find(x => x.name.toLowerCase() === m.sign.toLowerCase()) || { glyph: '✦', element: 'earth' };
+                const displayedRole = m.account_role || m.role || 'member';
                 return (
                   <tr key={m.id}>
                     <td style={{ fontWeight: '600' }}>{m.name}</td>
@@ -231,11 +305,11 @@ export default function AdminDashboard() {
                         fontSize: '12px',
                         textTransform: 'uppercase',
                         fontWeight: 'bold',
-                        background: m.role === 'officer' ? 'var(--house-active)' : 'transparent',
-                        color: m.role === 'officer' ? 'var(--accent)' : 'inherit',
+                        background: displayedRole === 'officer' ? 'var(--house-active)' : 'transparent',
+                        color: displayedRole === 'officer' ? 'var(--accent)' : 'inherit',
                         border: '1px solid var(--line)'
                       }}>
-                        {m.role}
+                        {displayedRole}
                       </span>
                     </td>
                     <td style={{ color: 'var(--muted)' }}>{formatGender(m.gender)}</td>
@@ -244,8 +318,18 @@ export default function AdminDashboard() {
                       <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{m.phone}</div>
                     </td>
                     <td>
-                      <span style={{ color: 'var(--earth)', fontSize: '13px', fontWeight: '600' }}>● Active</span>
+                      <span style={{ color: 'var(--earth)', fontSize: '13px', fontWeight: '600' }}>● {m.status || 'Active'}</span>
                     </td>
+                    {canManageMembers && <td style={{ whiteSpace: 'nowrap' }}>
+                      <button type="button" className="cam-btn-action cam-btn-edit" title={`Edit ${m.name}`} onClick={() => openMemberEditor(m)}>
+                        <Pencil size={14} aria-hidden="true" focusable="false" />
+                        <span>Edit</span>
+                      </button>{' '}
+                      <button type="button" className="cam-btn-action cam-btn-delete" title={`Delete ${m.name}`} onClick={() => handleDeleteMember(m)}>
+                        <Trash2 size={14} aria-hidden="true" focusable="false" />
+                        <span>Delete</span>
+                      </button>
+                    </td>}
                   </tr>
                 );
               })}
@@ -263,10 +347,11 @@ export default function AdminDashboard() {
               Stargazing sessions, speaker meetings, and celestial transits.
             </p>
           </div>
-          <button type="button" className="primary" onClick={() => setIsAddEventOpen(true)}>
+          {canManageMembers && <button type="button" className="primary" onClick={() => { setEventError(''); setIsAddEventOpen(true); }}>
             + Schedule Event
-          </button>
+          </button>}
         </div>
+        {eventError && !isAddEventOpen && !editingEvent && <p role="alert" style={{ color: 'var(--danger, #b42318)', margin: '0 0 16px' }}>{eventError}</p>}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
           {events.map((ev) => (
@@ -289,7 +374,7 @@ export default function AdminDashboard() {
                 }}>
                   {ev.type}
                 </span>
-                <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{ev.date}</span>
+                <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{ev.date.replace('T', ' ')}</span>
               </div>
               <h3 style={{ margin: 0, fontSize: '18px' }}>{ev.title}</h3>
               <p style={{ margin: 0, fontSize: '13px', color: 'var(--muted)' }}>📍 {ev.location}</p>
@@ -298,6 +383,17 @@ export default function AdminDashboard() {
                   🪐 Alignment: {ev.alignment}
                 </div>
               )}
+              {ev.description && <p style={{ margin: 0, fontSize: '13px', color: 'var(--muted)' }}>{ev.description}</p>}
+              {canManageMembers && <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                <button type="button" className="cam-btn-action cam-btn-edit" aria-label={`Edit event ${ev.title}`} title={`Edit event ${ev.title}`} onClick={() => openEventEditor(ev)}>
+                  <Pencil size={14} aria-hidden="true" focusable="false" />
+                  <span>Edit</span>
+                </button>
+                <button type="button" className="cam-btn-action cam-btn-delete" aria-label={`Delete event ${ev.title}`} title={`Delete event ${ev.title}`} onClick={() => handleDeleteEvent(ev)}>
+                  <Trash2 size={14} aria-hidden="true" focusable="false" />
+                  <span>Delete</span>
+                </button>
+              </div>}
             </div>
           ))}
         </div>
@@ -317,6 +413,7 @@ export default function AdminDashboard() {
         }}>
           <form onSubmit={handleAddMember} className="panel" style={{ width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <h2>Add Club Member</h2>
+            {memberError && <p role="alert" style={{ color: 'var(--danger, #b42318)', margin: 0 }}>{memberError}</p>}
             <div>
               <label>Full Name</label>
               <input
@@ -345,12 +442,17 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label>Pronouns / Gender</label>
-                <input
+                <label>Gender</label>
+                <select
+                  required
                   value={newMember.gender}
                   onChange={(e) => setNewMember({ ...newMember, gender: e.target.value })}
-                  placeholder="e.g. They/Them, F, M"
-                />
+                >
+                  <option value="" disabled>Select gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Non-binary">Non-binary</option>
+                </select>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -371,13 +473,48 @@ export default function AdminDashboard() {
                 >
                   <option value="member">Active Member</option>
                   <option value="officer">Club Officer</option>
-                  <option value="superadmin">President / SuperAdmin</option>
                 </select>
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
               <button type="button" onClick={() => setIsAddMemberOpen(false)}>Cancel</button>
               <button type="submit" className="primary">Save Member</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingMember && canManageMembers && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(7, 11, 25, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 100 }}>
+          <form onSubmit={handleUpdateMember} className="panel" style={{ width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <h2>Edit Member</h2>
+            {memberError && <p role="alert" style={{ color: 'var(--danger, #b42318)', margin: 0 }}>{memberError}</p>}
+            <label>Full Name<input required maxLength="255" value={editingMember.name} onChange={event => setEditingMember({ ...editingMember, name: event.target.value })} /></label>
+            <label>Email<input type="email" value={editingMember.email} onChange={event => setEditingMember({ ...editingMember, email: event.target.value })} /></label>
+            <label>Phone<input type="tel" maxLength="50" value={editingMember.phone} onChange={event => setEditingMember({ ...editingMember, phone: event.target.value })} /></label>
+            <label>Gender<select required value={['Male', 'Female', 'Non-binary'].includes(editingMember.gender) ? editingMember.gender : ''} onChange={event => setEditingMember({ ...editingMember, gender: event.target.value })}>
+              <option value="" disabled>Select gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Non-binary">Non-binary</option>
+            </select></label>
+            <label>Sun Sign<select required value={editingMember.sign} onChange={event => setEditingMember({ ...editingMember, sign: event.target.value })}>
+              {SIGNS.map(sign => <option key={sign.id} value={sign.name}>{sign.name}</option>)}
+            </select></label>
+            <label>Member Status<select required value={editingMember.status} onChange={event => setEditingMember({ ...editingMember, status: event.target.value })}>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="alumni">Alumni</option>
+              <option value="officer">Officer</option>
+            </select></label>
+            {user?.role === 'officer' && <label>Account Access<select required value={editingMember.account_role || 'member'} onChange={event => setEditingMember({ ...editingMember, account_role: event.target.value })}>
+              <option value="member">Member account</option>
+              <option value="officer">Officer account</option>
+              <option value="guest">Guest account</option>
+            </select></label>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button type="button" onClick={() => { setEditingMember(null); setMemberError(''); }}>Cancel</button>
+              <button type="submit" className="primary">Save Changes</button>
             </div>
           </form>
         </div>
@@ -395,60 +532,27 @@ export default function AdminDashboard() {
           padding: '20px',
           zIndex: 100
         }}>
-          <form onSubmit={handleAddEvent} className="panel" style={{ width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <form onSubmit={handleAddEvent} className="panel" style={{ width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <h2>Schedule Astrological Event</h2>
-            <div>
-              <label>Event Title</label>
-              <input
-                required
-                value={newEvent.title}
-                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                placeholder="e.g. Winter Solstice Observation"
-              />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div>
-                <label>Date & Time</label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={newEvent.date}
-                  onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                />
-              </div>
-              <div>
-                <label>Event Type</label>
-                <select
-                  value={newEvent.type}
-                  onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value })}
-                >
-                  <option value="stargazing">Stargazing Night</option>
-                  <option value="workshop">Workshop / Lecture</option>
-                  <option value="meeting">Club Meeting</option>
-                  <option value="social">Social Mixer</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label>Location</label>
-              <input
-                required
-                value={newEvent.location}
-                onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                placeholder="Observatory / Room 302"
-              />
-            </div>
-            <div>
-              <label>Astrological Transit / Alignment</label>
-              <input
-                value={newEvent.alignment}
-                onChange={(e) => setNewEvent({ ...newEvent, alignment: e.target.value })}
-                placeholder="e.g. New Moon in Sagittarius"
-              />
-            </div>
+            {eventError && <p role="alert" style={{ color: 'var(--danger, #b42318)', margin: 0 }}>{eventError}</p>}
+            {renderEventFields(newEvent, setNewEvent)}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <button type="button" onClick={() => setIsAddEventOpen(false)}>Cancel</button>
+              <button type="button" onClick={() => { setIsAddEventOpen(false); setEventError(''); }}>Cancel</button>
               <button type="submit" className="primary">Create Event</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingEvent && canManageMembers && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(7, 11, 25, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 100 }}>
+          <form onSubmit={handleUpdateEvent} className="panel" style={{ width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <h2>Edit Event</h2>
+            {eventError && <p role="alert" style={{ color: 'var(--danger, #b42318)', margin: 0 }}>{eventError}</p>}
+            {renderEventFields(editingEvent, setEditingEvent)}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button type="button" onClick={() => { setEditingEvent(null); setEventError(''); }}>Cancel</button>
+              <button type="submit" className="primary">Save Event</button>
             </div>
           </form>
         </div>

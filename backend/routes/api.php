@@ -29,7 +29,6 @@ Route::prefix('v1')->group(function () {
     // Members & Roster API (incorporating members.csv)
     Route::get('/members', [MemberController::class, 'index']);
     Route::post('/members', [MemberController::class, 'store']);
-    Route::post('/members/import-csv', [MemberController::class, 'importCSV']);
     Route::get('/members/analytics', [MemberController::class, 'analytics']);
 
     // Events & Gatherings

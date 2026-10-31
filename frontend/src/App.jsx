@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import PublicPortal from './components/PublicPortal';
-import ZodiacWheel from './components/ZodiacWheel';
 import AdminDashboard from './components/AdminDashboard';
 import { apiGet, setAuthToken } from './api';
 
@@ -37,11 +36,16 @@ export default function App() {
       <main style={{ flex: 1, maxWidth: '1200px', width: '100%', margin: '0 auto', padding: ' clamp(20px, 4vw, 48px) 20px' }}>
         {currentView === 'portal' && <PublicPortal onOpenWheel={() => setView('wheel')} user={user} setUser={setUser} accountMode={accountMode} setAccountMode={setAccountMode} focusNameSignal={focusNameSignal} />}
         {currentView === 'wheel' && (
-          <div>
-            <ZodiacWheel key={user?.id || 'guest'} />
+          <div style={{ width: '100%', minHeight: 'calc(100vh - 180px)' }}>
+            <iframe
+              title="C.A.M. Natal Wheel"
+              src="https://cam-zodiac-wheel.netlify.app/"
+              loading="lazy"
+              style={{ display: 'block', width: '100%', height: 'calc(100vh - 180px)', minHeight: '700px', border: 0 }}
+            />
           </div>
         )}
-        {currentView === 'admin' && <AdminDashboard />}
+        {currentView === 'admin' && <AdminDashboard user={user} />}
       </main>
 
       <footer style={{
@@ -58,7 +62,7 @@ export default function App() {
             <strong>C.A.M. (Cosmic Astrological Minds)</strong> · College Astrology Club Platform
           </div>
           <div>
-            Built with React, Laravel & MySQL · Palette: Cosmic Indigo, Blue, Purple & Gold
+            Built with love and light by TheCodingShaman.
           </div>
         </div>
       </footer>

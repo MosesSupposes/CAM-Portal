@@ -20,7 +20,7 @@ class Event extends Model
         'event_date',
         'celestial_alignment',
         'max_attendees',
-        'created_by',
+        'created_by_member_id',
     ];
 
     protected $casts = [
@@ -29,7 +29,7 @@ class Event extends Model
 
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(Member::class, 'created_by_member_id');
     }
 
     public function rsvps()
