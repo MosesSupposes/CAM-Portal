@@ -56,7 +56,7 @@ export default function Navbar({ currentView, setView, theme, setTheme, user, se
             className={currentView === 'portal' ? 'primary' : ''}
             onClick={() => setView('portal')}
           >
-            Club Portal
+            Community
           </button>
 
           <button
@@ -64,14 +64,14 @@ export default function Navbar({ currentView, setView, theme, setTheme, user, se
             className={currentView === 'wheel' ? 'primary' : ''}
             onClick={() => setView('wheel')}
           >
-            Natal Wheel
+            Your Chart
           </button>
           <button
             type="button"
             className={currentView === 'admin' ? 'primary' : ''}
             onClick={() => setView('admin')}
           >
-            Admin Cockpit
+            Club Hub
           </button>
 
           <div>
