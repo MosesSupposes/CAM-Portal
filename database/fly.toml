@@ -1,0 +1,18 @@
+app = "cam-mysql"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  MYSQL_DATABASE = "cam_astrology_db"
+  MYSQL_USER = "cam_user"
+
+[mounts]
+  source = "mysql_data"
+  destination = "/data"
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

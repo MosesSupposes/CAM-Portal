@@ -3,10 +3,28 @@ import Navbar from './components/Navbar';
 import PublicPortal from './components/PublicPortal';
 import ZodiacWheel from './components/ZodiacWheel';
 import AdminDashboard from './components/AdminDashboard';
+import { apiGet, setAuthToken } from './api';
 
 export default function App() {
   const [currentView, setView] = useState('portal');
   const [theme, setTheme] = useState('dark');
+  const [user, setUser] = useState(null);
+  const [accountMode, setAccountMode] = useState('register');
+  const [focusNameSignal, setFocusNameSignal] = useState(0);
+
+  const openAccountForm = () => {
+    setView('portal');
+    setAccountMode('register');
+    setFocusNameSignal(value => value + 1);
+  };
+
+  useEffect(() => {
+    if (localStorage.getItem('cam_auth_token')) {
+      apiGet('/auth/me').then(setUser).catch(() => {
+        setAuthToken(null);
+      });
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -14,20 +32,13 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Navbar currentView={currentView} setView={setView} theme={theme} setTheme={setTheme} />
+      <Navbar currentView={currentView} setView={setView} theme={theme} setTheme={setTheme} user={user} setUser={setUser} onOpenAccount={openAccountForm} />
 
       <main style={{ flex: 1, maxWidth: '1200px', width: '100%', margin: '0 auto', padding: ' clamp(20px, 4vw, 48px) 20px' }}>
-        {currentView === 'portal' && <PublicPortal onOpenWheel={() => setView('wheel')} />}
+        {currentView === 'portal' && <PublicPortal onOpenWheel={() => setView('wheel')} user={user} setUser={setUser} accountMode={accountMode} setAccountMode={setAccountMode} focusNameSignal={focusNameSignal} />}
         {currentView === 'wheel' && (
           <div>
-            <iframe
-              src="https://cam-zodiac-wheel.netlify.app"
-              title="Natal Wheel"
-              style={{ width: '100%', height: '80vh', minHeight: '600px', border: '1px solid var(--line)', borderRadius: '12px' }}
-            />
-            <p style={{ textAlign: 'center', fontSize: '13px' }}>
-              <a href="https://cam-zodiac-wheel.netlify.app" target="_blank" rel="noopener noreferrer">Open Natal Wheel in a new tab ↗</a>
-            </p>
+            <ZodiacWheel key={user?.id || 'guest'} />
           </div>
         )}
         {currentView === 'admin' && <AdminDashboard />}

@@ -20,3 +20,9 @@ INSERT INTO `members` (`full_name`, `email`, `phone`, `gender_identity`, `zodiac
 ('Cam', NULL, NULL, 'NB/M', 5, 'Leo', 'officer'),
 ('Mimi', NULL, NULL, 'F', 11, 'Aquarius', 'active'),
 ('Charlie Huerrera', NULL, NULL, 'M', 8, 'Scorpio', 'active');
+
+-- Seed upcoming events
+INSERT INTO `events` (`title`, `slug`, `description`, `event_type`, `location`, `event_date`, `celestial_alignment`) VALUES
+('Full Moon in Scorpio Night Vigil', 'full-moon-scorpio-night-vigil', 'Full Moon in Scorpio', 'stargazing', 'Observatory Quad', '2026-11-04 20:00:00', 'Full Moon in Scorpio'),
+('Introduction to Natal Wheel Calculations', 'intro-natal-wheel-calculations', 'Sun trine Neptune', 'workshop', 'Astrolab Hall 204', '2026-11-12 18:30:00', 'Sun trine Neptune'),
+('Zodiac Synastry & Compatibility Circle', 'zodiac-synastry-compatibility-circle', 'Venus conjunct Jupiter', 'social', 'Campus Student Center', '2026-11-20 19:00:00', 'Venus conjunct Jupiter');

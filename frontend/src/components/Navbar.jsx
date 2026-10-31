@@ -1,6 +1,13 @@
 import React from 'react';
+import { apiPost, setAuthToken } from '../api';
 
-export default function Navbar({ currentView, setView, theme, setTheme }) {
+export default function Navbar({ currentView, setView, theme, setTheme, user, setUser, onOpenAccount }) {
+  const logout = async () => {
+    try { await apiPost('/auth/logout', {}); } catch {}
+    setAuthToken(null);
+    setUser(null);
+  };
+
   return (
     <header style={{
       borderBottom: '1px solid var(--line)',
@@ -43,7 +50,7 @@ export default function Navbar({ currentView, setView, theme, setTheme }) {
         </div>
 
         {/* Navigation Links */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
           <button
             type="button"
             className={currentView === 'portal' ? 'primary' : ''}
@@ -51,6 +58,7 @@ export default function Navbar({ currentView, setView, theme, setTheme }) {
           >
             Club Portal
           </button>
+
           <button
             type="button"
             className={currentView === 'wheel' ? 'primary' : ''}
@@ -66,6 +74,17 @@ export default function Navbar({ currentView, setView, theme, setTheme }) {
             Admin Cockpit
           </button>
 
+          <div>
+            {user ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--muted)', fontSize: '13px' }}>
+                @{user.username}
+                <button type="button" onClick={logout}>Sign out</button>
+              </span>
+            ) : (
+              <button type="button" onClick={onOpenAccount}>Account</button>
+            )}
+          </div>
+
           {/* Theme Toggle Button */}
           <button
             type="button"
@@ -76,6 +95,7 @@ export default function Navbar({ currentView, setView, theme, setTheme }) {
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
         </nav>
+
       </div>
     </header>
   );

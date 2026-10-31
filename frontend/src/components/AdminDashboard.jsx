@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SIGNS, INITIAL_MEMBERS, INITIAL_EVENTS } from '../data/astrologyData';
+import { apiGet, apiPost } from '../api';
 
 export default function AdminDashboard() {
   const [members, setMembers] = useState(INITIAL_MEMBERS);
   const [events, setEvents] = useState(INITIAL_EVENTS);
+
+  useEffect(() => {
+    apiGet('/members').then(setMembers).catch(() => {});
+    apiGet('/events').then(setEvents).catch(() => {});
+  }, []);
   const [filterElement, setFilterElement] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
@@ -28,10 +34,10 @@ export default function AdminDashboard() {
     alignment: ''
   });
 
-  const handleAddMember = (e) => {
+  const handleAddMember = async (e) => {
     e.preventDefault();
     if (!newMember.name) return;
-    const added = {
+    let added = {
       id: Date.now(),
       name: newMember.name,
       email: newMember.email || '—',
@@ -41,18 +47,28 @@ export default function AdminDashboard() {
       role: newMember.role,
       status: 'active'
     };
+    try {
+      added = await apiPost('/members', newMember);
+    } catch {
+      // API unreachable: keep the local-only entry
+    }
     setMembers([added, ...members]);
     setIsAddMemberOpen(false);
     setNewMember({ name: '', email: '', phone: '', gender: 'NB', sign: 'Virgo', role: 'member' });
   };
 
-  const handleAddEvent = (e) => {
+  const handleAddEvent = async (e) => {
     e.preventDefault();
     if (!newEvent.title) return;
-    const added = {
+    let added = {
       id: Date.now(),
       ...newEvent
     };
+    try {
+      added = await apiPost('/events', newEvent);
+    } catch {
+      // API unreachable: keep the local-only entry
+    }
     setEvents([...events, added]);
     setIsAddEventOpen(false);
     setNewEvent({ title: '', date: '', location: '', type: 'meeting', alignment: '' });
@@ -187,7 +203,7 @@ export default function AdminDashboard() {
                 <th>Zodiac Sign</th>
                 <th>Element</th>
                 <th>Role</th>
-                <th>Gender / Identity</th>
+                <th>Gender</th>
                 <th>Contact Info</th>
                 <th>Status</th>
               </tr>

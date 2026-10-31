@@ -1,0 +1,21 @@
+app = "cam-backend-staging"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  APP_ENV = "staging"
+  PORT = "8080"
+  DB_CONNECTION = "mysql"
+  DB_HOST = "cam-mysql-staging.internal"
+  DB_PORT = "3306"
+  DB_DATABASE = "cam_astrology_db"
+  DB_USERNAME = "cam_user"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0

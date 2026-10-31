@@ -1,13 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SIGNS, INITIAL_EVENTS } from '../data/astrologyData';
+import { apiAuth, apiGet, setAuthToken } from '../api';
 
-export default function PublicPortal({ onOpenWheel }) {
-  const [joinSubmitted, setJoinSubmitted] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', sign: 'Virgo', interest: '' });
+export default function PublicPortal({ onOpenWheel, user, setUser, accountMode, setAccountMode, focusNameSignal }) {
+  const nameInputRef = useRef(null);
+  const identifierInputRef = useRef(null);
+  const previousAccountMode = useRef(accountMode);
+  const [authError, setAuthError] = useState('');
+  const [authNotice, setAuthNotice] = useState('');
+  const [events, setEvents] = useState(INITIAL_EVENTS);
+  useEffect(() => {
+    apiGet('/events').then(setEvents).catch(() => {});
+  }, []);
+  const [formData, setFormData] = useState({ name: '', studentId: '', username: '', password: '', identifier: '', email: '', phoneNumber: '', gender: '', sign: '', interest: '' });
 
-  const handleJoinSubmit = (e) => {
+  useEffect(() => {
+    if (!focusNameSignal) return;
+    document.getElementById('join-club')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    nameInputRef.current?.focus({ preventScroll: true });
+  }, [focusNameSignal]);
+
+  useEffect(() => {
+    if (accountMode === 'login') identifierInputRef.current?.focus();
+    if (accountMode === 'register' && previousAccountMode.current === 'login') nameInputRef.current?.focus();
+    previousAccountMode.current = accountMode;
+  }, [accountMode]);
+
+  const handleAccountSubmit = async (e) => {
     e.preventDefault();
-    setJoinSubmitted(true);
+    setAuthError('');
+    setAuthNotice('');
+    try {
+      const registering = accountMode === 'register';
+      const result = await apiAuth(registering ? '/auth/register' : '/auth/login', registering ? {
+        name: formData.name,
+        student_id: formData.studentId,
+        username: formData.username,
+        password: formData.password,
+        email: formData.email,
+        phone_number: formData.phoneNumber,
+        gender: formData.gender,
+        sign: formData.sign,
+        interest: formData.interest,
+      } : {
+        identifier: formData.identifier,
+        password: formData.password,
+      });
+      setAuthToken(result.token);
+      setUser(result.user);
+      setAuthNotice(registering ? `Account created. Welcome, ${result.user.name}.` : `Signed in as ${result.user.name}.`);
+      setFormData({ name: '', studentId: '', username: '', password: '', identifier: '', email: '', phoneNumber: '', gender: '', sign: '', interest: '' });
+    } catch (error) {
+      setAuthError(error.message);
+    }
   };
 
   return (
@@ -97,7 +142,7 @@ export default function PublicPortal({ onOpenWheel }) {
       <section className="panel">
         <h2 style={{ fontSize: '28px', marginBottom: '16px' }}>Upcoming Club Gatherings</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-          {INITIAL_EVENTS.map(ev => (
+          {events.map(ev => (
             <div key={ev.id} style={{
               background: 'var(--house)',
               border: '1px solid var(--line)',
@@ -117,12 +162,16 @@ export default function PublicPortal({ onOpenWheel }) {
 
       {/* Join C.A.M. Membership Form */}
       <section id="join-club" className="panel" style={{ maxWidth: '640px', margin: '0 auto', width: '100%' }}>
-        <h2 style={{ fontSize: '28px', textAlign: 'center' }}>Become a C.A.M. Member</h2>
+        <h2 style={{ fontSize: '28px', textAlign: 'center' }}>
+          {accountMode === 'login' ? 'Welcome back, Stargazer.' : 'Become a C.A.M. Member'}
+        </h2>
         <p style={{ color: 'var(--muted)', textAlign: 'center', marginBottom: '20px' }}>
-          Connect with fellow students, study charts, and attend observation nights.
+          {accountMode === 'login'
+            ? 'Sign in to revisit your saved chart notes and reconnect with the C.A.M. community.'
+            : 'Connect with fellow students, study charts, and attend observation nights.'}
         </p>
 
-        {joinSubmitted ? (
+        {user ? (
           <div style={{
             background: 'var(--house)',
             border: '1px solid var(--accent)',
@@ -130,52 +179,78 @@ export default function PublicPortal({ onOpenWheel }) {
             padding: '24px',
             textAlign: 'center'
           }}>
-            <h3 style={{ color: 'var(--accent)', margin: '0 0 8px' }}>Welcome to Cosmic Astrological Minds! ✦</h3>
+            <h3 style={{ color: 'var(--accent)', margin: '0 0 8px' }}>{authNotice || `Welcome, ${user.name}!`}</h3>
             <p style={{ margin: 0, color: 'var(--ink)' }}>
-              Thank you, {formData.name}. The officers will verify your student email and introduce you at the next meeting!
+              Your account is ready. Your saved Natal Wheel entries are linked to your account.
             </p>
           </div>
         ) : (
-          <form onSubmit={handleJoinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <label>Your Name</label>
-              <input
-                required
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Full name"
-              />
-            </div>
-            <div>
-              <label>Student Email Address</label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                placeholder="you@college.edu"
-              />
-            </div>
-            <div>
-              <label>Your Sun Sign</label>
-              <select
-                value={formData.sign}
-                onChange={e => setFormData({ ...formData, sign: e.target.value })}
-              >
-                {SIGNS.map(s => <option key={s.id} value={s.name}>{s.name} ({s.glyph})</option>)}
-              </select>
-            </div>
-            <div>
-              <label>What draws you to astrology?</label>
-              <textarea
-                rows="3"
-                value={formData.interest}
-                onChange={e => setFormData({ ...formData, interest: e.target.value })}
-                placeholder="Share your interest in natal charts, planetary transits, or club events..."
-              />
-            </div>
+          <form onSubmit={handleAccountSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0 }}>
+            {accountMode === 'register' ? (
+              <>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="account-name">Name</label>
+                  <input ref={nameInputRef} id="account-name" required autoComplete="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Full name" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="student-id">Student ID</label>
+                  <input id="student-id" required autoComplete="off" minLength="3" maxLength="32" pattern="[A-Za-z0-9-]{3,32}" value={formData.studentId} onChange={e => setFormData({ ...formData, studentId: e.target.value })} placeholder="Student ID number" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="account-username">Username</label>
+                  <input id="account-username" required minLength="3" maxLength="30" pattern="[A-Za-z0-9_]{3,30}" autoComplete="username" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} placeholder="Choose a username" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="account-password">Password</label>
+                  <input id="account-password" required minLength="12" maxLength="200" type="password" autoComplete="new-password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} placeholder="At least 12 characters" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="student-email">Student Email Address</label>
+                  <input id="student-email" type="email" required autoComplete="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="you@college.edu" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="account-phone">Phone Number <em>(optional)</em></label>
+                  <input id="account-phone" type="tel" maxLength="50" autoComplete="tel" value={formData.phoneNumber} onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })} placeholder="Phone number" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="account-gender">Gender</label>
+                  <select id="account-gender" required value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })}>
+                    <option value="" disabled>Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Non-binary">Non-binary</option>
+                  </select>
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="sun-sign">Your Sun Sign</label>
+                  <select id="sun-sign" required value={formData.sign} onChange={e => setFormData({ ...formData, sign: e.target.value })}>
+                    <option value="" disabled>Select sun sign</option>
+                    {SIGNS.map(s => <option key={s.id} value={s.name}>{s.name} ({s.glyph})</option>)}
+                  </select>
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="interest">What draws you to astrology? <em>(optional)</em></label>
+                  <textarea id="interest" rows="3" value={formData.interest} onChange={e => setFormData({ ...formData, interest: e.target.value })} placeholder="Share your interest in natal charts, planetary transits, or club events..." />
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="account-identifier">Username or Student ID</label>
+                  <input ref={identifierInputRef} id="account-identifier" required autoComplete="username" value={formData.identifier} onChange={e => setFormData({ ...formData, identifier: e.target.value })} placeholder="Username or Student ID" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="login-password">Password</label>
+                  <input id="login-password" required type="password" autoComplete="current-password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} placeholder="Password" />
+                </div>
+              </>
+            )}
+            {authError && <p role="alert" style={{ color: 'var(--danger, #b42318)', margin: 0 }}>{authError}</p>}
             <button type="submit" className="primary" style={{ padding: '12px', fontSize: '16px', marginTop: '6px' }}>
-              Submit Membership Request
+              {accountMode === 'register' ? 'Create account' : 'Sign in'}
+            </button>
+            <button type="button" onClick={() => { setAuthError(''); setAccountMode(accountMode === 'register' ? 'login' : 'register'); if (accountMode === 'login') document.getElementById('join-club')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}>
+              {accountMode === 'register' ? 'Already a member? Sign in.' : 'Create account'}
             </button>
           </form>
         )}

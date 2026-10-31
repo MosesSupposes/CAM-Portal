@@ -20,8 +20,10 @@ CREATE TABLE IF NOT EXISTS `zodiac_signs` (
 -- 2. User Accounts & Authentication (Sanctum Compatible)
 CREATE TABLE IF NOT EXISTS `users` (
     `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `username` VARCHAR(50) NULL UNIQUE,
+    `student_id` VARCHAR(32) NULL UNIQUE,
     `name` VARCHAR(255) NOT NULL,
-    `email` VARCHAR(255) NOT NULL UNIQUE,
+    `email` VARCHAR(255) NULL UNIQUE,
     `email_verified_at` TIMESTAMP NULL,
     `password` VARCHAR(255) NOT NULL,
     `role` ENUM('superadmin', 'officer', 'member', 'guest') DEFAULT 'member',
@@ -29,6 +31,26 @@ CREATE TABLE IF NOT EXISTS `users` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX `idx_users_role` (`role`)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS `api_tokens` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT UNSIGNED NOT NULL,
+    `token_hash` CHAR(64) NOT NULL UNIQUE,
+    `expires_at` DATETIME NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    INDEX `idx_api_tokens_expiry` (`expires_at`)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS `user_entries` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT UNSIGNED NOT NULL,
+    `entry_key` VARCHAR(100) NOT NULL,
+    `entry_value` JSON NOT NULL,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY `unique_user_entry` (`user_id`, `entry_key`),
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- 3. Club Members Profiles (Incorporating members.csv)

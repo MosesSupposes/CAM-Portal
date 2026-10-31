@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { SIGNS, HOUSES } from '../data/astrologyData';
+import { apiGet, apiPut } from '../api';
 
 export default function ZodiacWheel() {
   const svgRef = useRef(null);
@@ -9,12 +10,21 @@ export default function ZodiacWheel() {
   const [rotation, setRotation] = useState(0);
   const [personName, setPersonName] = useState('Momo');
   const [reflections, setReflections] = useState(() => {
+    if (localStorage.getItem('cam_auth_token')) return {};
     try {
       return JSON.parse(localStorage.getItem('cam_wheel_reflections')) || {};
     } catch {
       return {};
     }
   });
+
+  useEffect(() => {
+    if (!localStorage.getItem('cam_auth_token')) return;
+    apiGet('/entries').then((entries) => {
+      const notes = Object.fromEntries(Object.entries(entries).map(([key, value]) => [key.replace('house_', ''), value.note]));
+      setReflections(notes);
+    }).catch(() => {});
+  }, []);
 
   // Synthesize soft astral chime on house select
   const playChime = (freq = 440) => {
@@ -52,9 +62,13 @@ export default function ZodiacWheel() {
   const handleNoteChange = (text) => {
     const updated = { ...reflections, [activeHouse]: text };
     setReflections(updated);
-    try {
-      localStorage.setItem('cam_wheel_reflections', JSON.stringify(updated));
-    } catch {}
+    if (localStorage.getItem('cam_auth_token')) {
+      apiPut(`/entries/house_${activeHouse}`, { note: text }).catch(() => {});
+    } else {
+      try {
+        localStorage.setItem('cam_wheel_reflections', JSON.stringify(updated));
+      } catch {}
+    }
   };
 
   // Build the wheel arcs via D3

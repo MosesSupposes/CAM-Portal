@@ -1,6 +1,6 @@
-Name, Email, Number, Gender, Sign
-Momo Samuel, theCodingShaman@gmail.com, (929) 389-7608, NB/F, Virgo
-Cam, "", "", NB/M, Leo
+Name, StudentID, Email, Number, Gender, Sign
+Momo Samuel, 700742753, msamue10@dtcc.edu, (929) 389-7608, Non-binary, Virgo
+Cam, "", "", Non-binary, Leo
 Mimi, , , F, Aquarius
 Charlie Huerrera, , , M, Scorpio
 

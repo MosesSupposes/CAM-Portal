@@ -38,11 +38,12 @@ services:
       - ../backend:/var/www/html
     environment:
       DB_CONNECTION: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: cam_astrology_db
-      DB_USERNAME: cam_user
-      DB_PASSWORD: cam_password
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-cam_astrology_db}
+      DB_USERNAME: ${DB_USERNAME:-cam_user}
+      DB_PASSWORD: ${DB_PASSWORD:-cam_password}
+      APP_ENV: ${APP_ENV:-dev}
     depends_on:
       - mysql
     networks:
@@ -55,14 +56,34 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root_secret_password
-      MYSQL_DATABASE: cam_astrology_db
-      MYSQL_USER: cam_user
-      MYSQL_PASSWORD: cam_password
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret_password}
+      MYSQL_DATABASE: ${DB_DATABASE:-cam_astrology_db}
+      MYSQL_USER: ${DB_USERNAME:-cam_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-cam_password}
     ports:
       - "3306:3306"
     volumes:
       - cam_db_data:/var/lib/mysql
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ../database/seeds/members_import.sql:/docker-entrypoint-initdb.d/02_seeds.sql:ro
+    networks:
+      - cam_network
+
+  staging-mysql:
+    image: mysql:8.0
+    container_name: cam_staging_mysql
+    profiles: [staging]
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${STAGING_DB_ROOT_PASSWORD:-staging_root_password}
+      MYSQL_DATABASE: ${STAGING_DB_DATABASE:-cam_astrology_db}
+      MYSQL_USER: ${STAGING_DB_USERNAME:-cam_user}
+      MYSQL_PASSWORD: ${STAGING_DB_PASSWORD:-staging_cam_password}
+    ports:
+      - "3307:3306"
+    volumes:
+      - cam_staging_db_data:/var/lib/mysql
       - ../database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       - ../database/seeds/members_import.sql:/docker-entrypoint-initdb.d/02_seeds.sql:ro
     networks:
@@ -74,3 +95,4 @@ networks:
 
 volumes:
   cam_db_data:
+  cam_staging_db_data:

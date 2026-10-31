@@ -6,6 +6,10 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://cam-backend.fly.dev/api/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
