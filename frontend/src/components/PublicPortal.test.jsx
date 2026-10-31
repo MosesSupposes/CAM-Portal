@@ -116,8 +116,12 @@ describe('onboarding account form', () => {
   });
 
   it('labels the member roster column Gender', () => {
+    apiGet.mockImplementation(() => new Promise(() => {}));
     render(<AdminDashboard />);
     expect(screen.getByRole('columnheader', { name: 'Gender' })).toBeTruthy();
     expect(screen.queryByRole('columnheader', { name: 'Gender / Identity' })).toBeNull();
+    expect(screen.getAllByText('Non-binary')).toHaveLength(2);
+    expect(screen.getByText('Female')).toBeTruthy();
+    expect(screen.getByText('Male')).toBeTruthy();
   });
 });

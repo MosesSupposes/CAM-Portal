@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SIGNS, INITIAL_MEMBERS, INITIAL_EVENTS } from '../data/astrologyData';
 import { apiGet, apiPost } from '../api';
+import { formatCsvRow, formatGender } from './rosterFormatting';
 
 export default function AdminDashboard() {
   const [members, setMembers] = useState(INITIAL_MEMBERS);
@@ -75,9 +76,9 @@ export default function AdminDashboard() {
   };
 
   const exportCSV = () => {
-    const headers = "Name,Email,Number,Gender,Sign,Role\n";
-    const rows = members.map(m => `"${m.name}","${m.email}","${m.phone}","${m.gender}","${m.sign}","${m.role}"`).join("\n");
-    const blob = new Blob([headers + rows], { type: 'text/csv' });
+    const headers = formatCsvRow(['Name', 'Email', 'Number', 'Gender', 'Sign', 'Role']);
+    const rows = members.map(m => formatCsvRow([m.name, m.email, m.phone, formatGender(m.gender), m.sign, m.role]));
+    const blob = new Blob([[headers, ...rows].join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -237,7 +238,7 @@ export default function AdminDashboard() {
                         {m.role}
                       </span>
                     </td>
-                    <td style={{ color: 'var(--muted)' }}>{m.gender || '—'}</td>
+                    <td style={{ color: 'var(--muted)' }}>{formatGender(m.gender)}</td>
                     <td>
                       <div style={{ fontSize: '13px' }}>{m.email}</div>
                       <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{m.phone}</div>
